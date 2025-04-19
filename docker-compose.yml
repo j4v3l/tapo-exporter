@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  tapo-exporter:
+    build: .
+    env_file:
+      - .env
+    environment:
+      - TAPO_DEVICE_COUNT=${TAPO_DEVICE_COUNT:-1}
+      - TAPO_DEVICE_1_NAME=${TAPO_DEVICE_1_NAME:-TapoDevice}
+      - TAPO_DEVICE_1_TYPE=${TAPO_DEVICE_1_TYPE:-p110}
+      - TAPO_DEVICE_1_IP=${TAPO_IP}
+      - TAPO_DEVICE_1_EMAIL=${TAPO_EMAIL}
+      - TAPO_DEVICE_1_PASSWORD=${TAPO_PASSWORD}
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=tapo-token-1234567890
+      - INFLUXDB_ORG=tapo
+      - INFLUXDB_BUCKET=tapo
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
+      - LOG_DIR=/var/log/tapo
+    ports:
+      - "8000:8000"
+    volumes:
+      - tapo_logs:/var/log/tapo
+    networks:
+      - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+    depends_on:
+      influxdb:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
+      - influxdb
+
+  influxdb:
+    image: influxdb:2.7
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=admin12345678
+      - DOCKER_INFLUXDB_INIT_ORG=tapo
+      - DOCKER_INFLUXDB_INIT_BUCKET=tapo
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=tapo-token-1234567890
+    ports:
+      - "8086:8086"
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  tapo_logs:
+  grafana_data:
+  influxdb_data:
+
+networks:
+  monitoring:
+    driver: bridge 
