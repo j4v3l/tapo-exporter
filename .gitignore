@@ -84,7 +84,7 @@ docker-compose.override.yml
 
 # Grafana
 grafana/provisioning/datasources/influxdb.yaml
-grafana/provisioning/dashboards/tapo_dashboard.json
+# grafana/provisioning/dashboards/tapo_dashboard.json
 
 # InfluxDB
 influxdb_data/
