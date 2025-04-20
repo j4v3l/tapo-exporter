@@ -2236,3 +2236,6 @@ rust/target/release/deps/zerofrom-380259369e26cf4a.d
 rust/target/release/deps/zeroize-f68093553317d771.d
 rust/target/release/deps/zerovec_derive-4581c2550942dfff.d
 rust/target/release/deps/zerovec-6ffcb77452a59239.d
+grafana/provisioning/dashboards/tapo_control_dashboard.json
+grafana/provisioning/dashboards/generate_dashboard.py
+grafana/provisioning/dashboards/update_dashboard.sh
