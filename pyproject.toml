@@ -7,7 +7,7 @@ name = "tapo-exporter"
 version = "0.1.0"
 description = "A Prometheus and InfluxDB exporter for Tapo smart devices"
 authors = [
-    {name = "Javel Palmer", email = "javel.palmer@gmail.com"},
+    {name = "j4v3l", email = "jj4v3l@gmail.com"},
 ]
 dependencies = [
     "prometheus-client>=0.19.0",
