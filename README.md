@@ -128,6 +128,23 @@ This will start:
   - Individual device metrics are grouped by device name
   - Time-series graphs show historical data from InfluxDB
 
+## Screenshots
+
+### Grafana Dashboard
+
+![Grafana Dashboard](docs/screenshots/grafana-dashboard.jpeg)
+*Main dashboard showing power consumption, voltage, and current metrics for all devices*
+
+<!-- ### Device Details
+
+![Device Details](docs/screenshots/device-details.png)
+*Detailed view of individual device metrics including energy usage and runtime statistics*
+
+### Prometheus Metrics
+
+![Prometheus Metrics](docs/screenshots/prometheus-metrics.png)
+*Raw metrics exposed by the exporter in Prometheus format* -->
+
 The pre-built dashboards are located in the `grafana/provisioning/dashboards` directory of this repository. You can customize these dashboards by:
 
 1. Modifying the JSON files in the repository
@@ -207,3 +224,47 @@ The exporter automatically writes metrics to InfluxDB if configured. The followi
 ## License
 
 MIT License
+
+### Building and Publishing to Docker Hub
+
+1. Make the build script executable:
+
+   ```bash
+   chmod +x build.sh
+   ```
+
+2. The build script is configured with:
+   - Multi-architecture support (amd64 and arm64)
+   - Docker Hub metadata (description, category, version, etc.)
+   - Automated version tagging
+   - Security best practices (non-root user, multi-stage builds)
+
+3. Run the build script:
+
+   ```bash
+   ./build.sh
+   ```
+
+The script will:
+
+- Check for Docker and Docker Buildx installation
+- Verify Docker Hub login
+- Set up a multi-architecture build environment
+- Build the image for both amd64 and arm64 architectures
+- Add metadata labels for better discoverability
+- Push the image to Docker Hub with version and latest tags
+- Display the pull command for the new image
+
+To update the version:
+
+1. Edit the `VERSION` file with the new version number
+2. Run `./build.sh` again
+
+The published image will include:
+
+- Description: "Prometheus and InfluxDB exporter for Tapo smart devices"
+- Category: "monitoring"
+- Source code link
+- License information
+- Build date and version
+- Support for both amd64 and arm64 architectures
