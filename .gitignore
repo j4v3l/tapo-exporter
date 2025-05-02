@@ -70,13 +70,13 @@ logs/
 log/
 
 # Test files
-test/
-tests/
-*.test.py
-*_test.py
-*_tests.py
-test_*.py
-tests_*.py
+# test/
+# tests/
+# *.test.py
+# *_test.py
+# *_tests.py
+# test_*.py
+# tests_*.py
 
 # Docker
 .docker/
