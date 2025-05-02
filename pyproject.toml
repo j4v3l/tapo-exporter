@@ -14,7 +14,6 @@ dependencies = [
     "influxdb-client>=1.36.0",
     "python-dotenv>=1.0.0",
     "tapo>=0.8.0",
-    "types-all>=0.1.0",
 ]
 requires-python = ">=3.8"
 readme = "README.md"
@@ -44,7 +43,6 @@ dev = [
     "isort>=5.12",
     "mypy>=1.0",
     "flake8>=6.0",
-    "types-all>=0.1.0",
 ]
 
 [tool.black]
@@ -72,4 +70,12 @@ plugins = ["pydantic.mypy"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-v --cov=tapo_exporter --cov-report=term-missing" 
+python_functions = ["test_*"]
+python_classes = ["Test*"]
+addopts = "--cov=tapo_exporter --cov-report=term-missing"
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+asyncio_default_test_loop_scope = "function"
+
+[tool.hatch.build.targets.wheel]
+packages = ["tapo_exporter"] 
