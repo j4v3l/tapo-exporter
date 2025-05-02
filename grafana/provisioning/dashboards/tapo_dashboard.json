@@ -195,11 +195,11 @@
             "type": "influxdb",
             "uid": "influxdb"
           },
-          "query": "from(bucket: \"tapo\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"tapo_metrics\")\n  |> filter(fn: (r) => r[\"_field\"] == \"current_amps\")\n  |> filter(fn: (r) => r[\"device_name\"] != \"all\")\n  |> last()\n  |> group()\n  |> sum()",
+          "query": "from(bucket: \"tapo\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"tapo_metrics\")\n  |> filter(fn: (r) => r[\"_field\"] == \"current_amps\")\n  |> filter(fn: (r) => r[\"device_name\"] != \"all\")\n  |> last()\n  |> group()\n  |> mean()",
           "refId": "A"
         }
       ],
-      "title": "Current (Combined)",
+      "title": "Current (Mean)",
       "type": "stat"
     },
     {
@@ -224,7 +224,7 @@
               }
             ]
           },
-          "unit": "amp"
+          "unit": "volt"
         }
       },
       "gridPos": {
