@@ -3,14 +3,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tapo_exporter.devices.base import TapoDevice
+from tapo_exporter.devices.base import BaseTapoDevice
 from tapo_exporter.devices.p110 import P110Device
 
 
 @pytest.fixture
 def mock_device():
     """Create a mock Tapo device."""
-    device = MagicMock(spec=TapoDevice)
+    device = MagicMock(spec=BaseTapoDevice)
     device.device_id = "test-device"
     device.device_on = True
     device.power = 100.0
