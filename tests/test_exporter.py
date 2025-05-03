@@ -145,21 +145,34 @@ async def test_exporter_start(mock_devices, mock_influx_client):
 async def test_exporter_start_error(mock_devices, mock_influx_client):
     """Test error handling during exporter start."""
     with patch("prometheus_client.start_http_server") as mock_start_server:
+        # Configure start_http_server to raise OSError on first call
+        mock_start_server.side_effect = [
+            OSError(48, "Address already in use"),  # First call fails
+            None  # Second call succeeds
+        ]
+        
         exporter = TapoExporter(devices=mock_devices)
         mock_device = MagicMock()
         mock_device.name = "test_device"
         mock_device.device = MagicMock()
-        mock_device.get_device_info = AsyncMock(side_effect=Exception("Test error"))
+        mock_device.get_device_info = AsyncMock(
+            side_effect=Exception("Test error")
+        )
         exporter.add_device(mock_device)
 
         # Create a task that will cancel after a short delay
-        task = asyncio.create_task(exporter.start())
+        task = asyncio.create_task(exporter.start(port=0))  # Use port 0
         await asyncio.sleep(0.1)
         task.cancel()
         try:
             await task
         except asyncio.CancelledError:
             pass
+
+        # Verify start_http_server was called twice
+        assert mock_start_server.call_count == 2
+        assert mock_start_server.call_args_list[0] == call(0)
+        assert mock_start_server.call_args_list[1] == call(0)
 
 
 @pytest.mark.asyncio
@@ -236,8 +249,16 @@ async def test_exporter_update_metrics_failed_usage_info(
 @pytest.mark.asyncio
 async def test_exporter_start_error_handling(mock_influx_client):
     """Test error handling in start method."""
-    with patch("tapo_exporter.exporter.logger") as mock_logger, \
-         patch("prometheus_client.start_http_server") as mock_start_server:
+    with (
+        patch("tapo_exporter.exporter.logger") as mock_logger,
+        patch("prometheus_client.start_http_server") as mock_start_server
+    ):
+        # Configure start_http_server to raise OSError on first call
+        mock_start_server.side_effect = [
+            OSError(48, "Address already in use"),  # First call fails
+            None  # Second call succeeds
+        ]
+        
         exporter = TapoExporter()
         mock_device = MagicMock()
         mock_device.name = "test_device"
@@ -248,13 +269,21 @@ async def test_exporter_start_error_handling(mock_influx_client):
         exporter.add_device(mock_device)
 
         # Create a task that will cancel after a short delay
-        task = asyncio.create_task(exporter.start())
+        task = asyncio.create_task(exporter.start(port=0))  # Use port 0
         await asyncio.sleep(0.1)
         task.cancel()
         try:
             await task
         except asyncio.CancelledError:
             pass
+
+        # Verify start_http_server was called twice
+        assert mock_start_server.call_count == 2
+        assert mock_start_server.call_args_list[0] == call(0)
+        assert mock_start_server.call_args_list[1] == call(0)
+        
+        # Verify warning was logged
+        mock_logger.warning.assert_called_once()
 
 
 @pytest.mark.asyncio
