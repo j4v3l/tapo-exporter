@@ -3,9 +3,11 @@ import asyncio
 import logging
 import os
 import traceback
+import socket
 from typing import List
 from influxdb_client import InfluxDBClient
 from influxdb_client.client.write_api import SYNCHRONOUS
+from prometheus_client import start_http_server
 
 from .devices.p110 import P110Device
 from .metrics import TapoMetrics
@@ -324,6 +326,26 @@ class TapoExporter:
 
     async def start(self, port: int = 9999):
         """Start the exporter."""
+        try:
+            # Start Prometheus HTTP server
+            start_http_server(port)
+            logger.info(f"Started Prometheus HTTP server on port {port}")
+        except OSError as e:
+            if e.errno == 48:  # Address already in use
+                logger.warning(
+                    f"Port {port} is already in use. "
+                    "Prometheus metrics may not be available."
+                )
+                # Try to start server on a different port
+                try:
+                    start_http_server(0)  # Let the OS choose an available port
+                    logger.info("Started Prometheus HTTP server on a different port")
+                except Exception as e:
+                    logger.error(f"Failed to start Prometheus server: {str(e)}")
+                    raise  # Re-raise the exception to ensure the error is propagated
+            else:
+                raise
+        
         # Connect to all devices
         await self.connect_devices()
         
