@@ -105,20 +105,83 @@ jobs:
   release:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
     
-    - name: Update version
+    - name: Get latest version
+      id: get_version
       run: |
-        echo "${{ github.event.release.tag_name }}" > VERSION
+        # Get the latest version from git tags
+        latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        echo "Latest tag: $latest_tag"
         
+        # Extract version numbers
+        major=$(echo $latest_tag | cut -d. -f1 | tr -d 'v')
+        minor=$(echo $latest_tag | cut -d. -f2)
+        patch=$(echo $latest_tag | cut -d. -f3)
+        
+        # Get commit messages since last tag
+        commit_messages=$(git log $latest_tag..HEAD --pretty=format:"%s")
+        
+        # Determine version increment based on commit messages
+        if echo "$commit_messages" | grep -q "BREAKING CHANGE\|!:"; then
+          # Major version bump for breaking changes
+          new_major=$((major + 1))
+          new_minor=0
+          new_patch=0
+          echo "Breaking change detected, bumping major version"
+        elif echo "$commit_messages" | grep -q "feat:"; then
+          # Minor version bump for new features
+          new_major=$major
+          new_minor=$((minor + 1))
+          new_patch=0
+          echo "New feature detected, bumping minor version"
+        else
+          # Patch version bump for fixes and other changes
+          new_major=$major
+          new_minor=$minor
+          new_patch=$((patch + 1))
+          echo "Bumping patch version"
+        fi
+        
+        new_version="v$new_major.$new_minor.$new_patch"
+        echo "New version: $new_version"
+        echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
+        echo "new_version=$new_version" >> $GITHUB_OUTPUT
+    
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
+        tag_name: ${{ env.NEW_VERSION }}
+        name: Release ${{ env.NEW_VERSION }}
+        body: |
+          ## What's Changed
+          
+          ### Breaking Changes
+          ${{ contains(github.event.head_commit.message, 'BREAKING CHANGE') && format('🚨 {0}', github.event.head_commit.message) || 'None' }}
+          
+          ### New Features
+          ${{ contains(github.event.head_commit.message, 'feat:') && format('✨ {0}', github.event.head_commit.message) || 'None' }}
+          
+          ### Bug Fixes
+          ${{ contains(github.event.head_commit.message, 'fix:') && format('🐛 {0}', github.event.head_commit.message) || 'None' }}
+          
+          ### Other Changes
+          ${{ !contains(github.event.head_commit.message, 'BREAKING CHANGE') && !contains(github.event.head_commit.message, 'feat:') && !contains(github.event.head_commit.message, 'fix:') && format('📝 {0}', github.event.head_commit.message) || 'None' }}
+          
+          ## Docker Image
+          The Docker image is available at: `${{ env.DOCKER_IMAGE }}:${{ env.NEW_VERSION }}`
+          
+          ## Installation
+          ```bash
+          docker pull ${{ env.DOCKER_IMAGE }}:${{ env.NEW_VERSION }}
+          ```
+        generate_release_notes: true
         files: |
           VERSION
-        generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
