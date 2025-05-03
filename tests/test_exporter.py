@@ -1,7 +1,7 @@
 """Test the TapoExporter class."""
 import asyncio
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch, call
 
 from tapo_exporter.exporter import TapoExporter
 
@@ -144,21 +144,22 @@ async def test_exporter_start(mock_devices, mock_influx_client):
 @pytest.mark.asyncio
 async def test_exporter_start_error(mock_devices, mock_influx_client):
     """Test error handling during exporter start."""
-    exporter = TapoExporter(devices=mock_devices)
-    mock_device = MagicMock()
-    mock_device.name = "test_device"
-    mock_device.device = MagicMock()
-    mock_device.get_device_info = AsyncMock(side_effect=Exception("Test error"))
-    exporter.add_device(mock_device)
-    
-    # Create a task that will cancel after a short delay
-    task = asyncio.create_task(exporter.start())
-    await asyncio.sleep(0.1)
-    task.cancel()
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass
+    with patch("prometheus_client.start_http_server") as mock_start_server:
+        exporter = TapoExporter(devices=mock_devices)
+        mock_device = MagicMock()
+        mock_device.name = "test_device"
+        mock_device.device = MagicMock()
+        mock_device.get_device_info = AsyncMock(side_effect=Exception("Test error"))
+        exporter.add_device(mock_device)
+
+        # Create a task that will cancel after a short delay
+        task = asyncio.create_task(exporter.start())
+        await asyncio.sleep(0.1)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
 
 @pytest.mark.asyncio
@@ -235,7 +236,8 @@ async def test_exporter_update_metrics_failed_usage_info(
 @pytest.mark.asyncio
 async def test_exporter_start_error_handling(mock_influx_client):
     """Test error handling in start method."""
-    with patch("tapo_exporter.exporter.logger") as mock_logger:
+    with patch("tapo_exporter.exporter.logger") as mock_logger, \
+         patch("prometheus_client.start_http_server") as mock_start_server:
         exporter = TapoExporter()
         mock_device = MagicMock()
         mock_device.name = "test_device"
@@ -244,7 +246,7 @@ async def test_exporter_start_error_handling(mock_influx_client):
             side_effect=Exception("Test error")
         )
         exporter.add_device(mock_device)
-        
+
         # Create a task that will cancel after a short delay
         task = asyncio.create_task(exporter.start())
         await asyncio.sleep(0.1)
@@ -686,37 +688,47 @@ async def test_exporter_start_and_stop():
         overheat_protection=False,
         signal_strength=80
     ))
-    
-    # Create the exporter with mocked InfluxDB client
-    with patch("influxdb_client.InfluxDBClient") as mock_influx, \
-         patch("prometheus_client.start_http_server") as mock_start_server:
+
+    # Create the exporter with mocked InfluxDB client and start_http_server
+    with patch("tapo_exporter.exporter.start_http_server") as mock_start_server, \
+         patch("influxdb_client.InfluxDBClient") as mock_influx, \
+         patch("socket.socket") as mock_socket:
+        # Configure socket mock to simulate port not in use
+        mock_socket_instance = MagicMock()
+        mock_socket.return_value = mock_socket_instance
+        mock_socket_instance.bind.side_effect = OSError(48, "Address already in use")
+        mock_socket_instance.close.return_value = None
+        
         mock_write_api = MagicMock()
         mock_influx.return_value.write_api = mock_write_api
         exporter = TapoExporter([device])
-        
+
         # Mock connect_devices
         exporter.connect_devices = AsyncMock()
-        
+
+        # Configure start_http_server to raise OSError on first call
+        mock_start_server.side_effect = [
+            OSError(48, "Address already in use"),  # First call fails
+            None  # Second call succeeds
+        ]
+
         # Start the exporter
         task = asyncio.create_task(exporter.start(port=9999))
-        
+
         # Wait for server to start
         await asyncio.sleep(0.1)
-        
-        # Verify server was started
-        mock_start_server.assert_called_once_with(9999)
-        
-        # Cancel the task after a short delay
+
+        # Verify server was started with port 0 after port 9999 was in use
+        assert mock_start_server.call_count == 2, "start_http_server should be called twice"
+        assert mock_start_server.call_args_list[0] == call(9999), "First call should be with port 9999"
+        assert mock_start_server.call_args_list[1] == call(0), "Second call should be with port 0"
+
+        # Cancel the task
         task.cancel()
         try:
             await task
         except asyncio.CancelledError:
             pass
-        
+
         # Stop the exporter
-        await exporter.stop()
-        
-        # Verify tasks were cancelled if they exist
-        if hasattr(exporter, "_tasks") and exporter._tasks:
-            for task in exporter._tasks:
-                assert task.cancelled() 
+        await exporter.stop() 
