@@ -160,6 +160,9 @@ async def test_exporter_start_error(mock_devices, mock_influx_client):
         )
         exporter.add_device(mock_device)
 
+        # Mock connect_devices to avoid actual connection attempts
+        exporter.connect_devices = AsyncMock()
+
         # Create a task that will cancel after a short delay
         task = asyncio.create_task(exporter.start(port=0))  # Use port 0
         await asyncio.sleep(0.1)
@@ -267,6 +270,9 @@ async def test_exporter_start_error_handling(mock_influx_client):
             side_effect=Exception("Test error")
         )
         exporter.add_device(mock_device)
+
+        # Mock connect_devices to avoid actual connection attempts
+        exporter.connect_devices = AsyncMock()
 
         # Create a task that will cancel after a short delay
         task = asyncio.create_task(exporter.start(port=0))  # Use port 0
