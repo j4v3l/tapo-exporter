@@ -144,7 +144,7 @@ async def test_exporter_start(mock_devices, mock_influx_client):
 @pytest.mark.asyncio
 async def test_exporter_start_error(mock_devices, mock_influx_client):
     """Test error handling during exporter start."""
-    with patch("prometheus_client.start_http_server") as mock_start_server:
+    with patch("tapo_exporter.exporter.start_http_server") as mock_start_server:
         # Configure start_http_server to raise OSError on first call
         mock_start_server.side_effect = [
             OSError(48, "Address already in use"),  # First call fails
@@ -257,7 +257,7 @@ async def test_exporter_start_error_handling(mock_influx_client):
     """Test error handling in start method."""
     with (
         patch("tapo_exporter.exporter.logger") as mock_logger,
-        patch("prometheus_client.start_http_server") as mock_start_server
+        patch("tapo_exporter.exporter.start_http_server") as mock_start_server
     ):
         # Configure start_http_server to raise OSError on first call
         mock_start_server.side_effect = [
