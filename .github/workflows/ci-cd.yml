@@ -37,7 +37,7 @@ jobs:
     - name: Run tests
       run: |
         pytest tests/ -v --cov=tapo_exporter --cov-report=term-missing
-        pytest tests/test_kasa.py -v
+        pytest tests/test_kasa.py --maxfail=3 --disable-warnings -v
         
     - name: Run linting
       run: |
