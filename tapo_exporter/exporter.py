@@ -324,17 +324,26 @@ class TapoExporter:
                 )
                 continue
 
-    async def start(self, port: int = 9999):
-        """Start the exporter."""
+    async def start(self, port: int = 0):
+        """Start the exporter.
+        
+        Args:
+            port: The port to start the Prometheus HTTP server on.
+                 If 0, the OS will choose an available port.
+        """
         try:
             # Start Prometheus HTTP server
             start_http_server(port)
-            logger.info(f"Started Prometheus HTTP server on port {port}")
+            logger.info(
+                f"Started Prometheus HTTP server on port {port}"
+                if port != 0 else
+                "Started Prometheus HTTP server on OS-assigned port"
+            )
         except OSError as e:
             if e.errno == 48:  # Address already in use
                 logger.warning(
                     f"Port {port} is already in use. "
-                    "Prometheus metrics may not be available."
+                    "Trying to start server on a different port."
                 )
                 # Try to start server on a different port
                 try:
