@@ -12,19 +12,45 @@ class TestTapoDevice(BaseTapoDevice):
     
     async def _get_device(self):
         """Get the device."""
-        return MagicMock()
+        return AsyncMock()
     
     async def get_device_info(self):
         """Get device info."""
-        raise NotImplementedError()
+        if not self.device:
+            raise RuntimeError("Device not connected")
+        return {"test": "info"}
     
     async def get_current_power(self):
         """Get current power."""
-        raise NotImplementedError()
+        if not self.device:
+            raise RuntimeError("Device not connected")
+        return {"power": 100}
     
     async def get_device_usage(self):
         """Get device usage."""
-        raise NotImplementedError()
+        if not self.device:
+            raise RuntimeError("Device not connected")
+        return {"usage": "data"}
+
+
+class NotImplementedTapoDevice(BaseTapoDevice):
+    """Device class that doesn't implement required methods for testing."""
+    
+    async def _get_device(self):
+        """Get the device."""
+        return AsyncMock()
+    
+    async def get_device_info(self):
+        """Get device info."""
+        raise NotImplementedError("get_device_info not implemented")
+    
+    async def get_current_power(self):
+        """Get current power."""
+        raise NotImplementedError("get_current_power not implemented")
+    
+    async def get_device_usage(self):
+        """Get device usage."""
+        raise NotImplementedError("get_device_usage not implemented")
 
 
 @pytest.fixture
@@ -68,7 +94,7 @@ async def test_base_device_initialization():
 @pytest.mark.asyncio
 async def test_base_device_connect_not_implemented():
     """Test that base device connect raises NotImplementedError."""
-    device = TestTapoDevice(
+    device = NotImplementedTapoDevice(
         ip="192.168.1.100",
         email="test@example.com",
         password="password",
@@ -82,7 +108,7 @@ async def test_base_device_connect_not_implemented():
 @pytest.mark.asyncio
 async def test_base_device_get_info_not_implemented():
     """Test that base device get_info raises NotImplementedError."""
-    device = TestTapoDevice(
+    device = NotImplementedTapoDevice(
         ip="192.168.1.100",
         email="test@example.com",
         password="password",
@@ -96,7 +122,7 @@ async def test_base_device_get_info_not_implemented():
 @pytest.mark.asyncio
 async def test_base_device_get_current_power_not_implemented():
     """Test that base device get_current_power raises NotImplementedError."""
-    device = TestTapoDevice(
+    device = NotImplementedTapoDevice(
         ip="192.168.1.100",
         email="test@example.com",
         password="password",
@@ -110,7 +136,7 @@ async def test_base_device_get_current_power_not_implemented():
 @pytest.mark.asyncio
 async def test_base_device_get_device_usage_not_implemented():
     """Test that base device get_device_usage raises NotImplementedError."""
-    device = TestTapoDevice(
+    device = NotImplementedTapoDevice(
         ip="192.168.1.100",
         email="test@example.com",
         password="password",
@@ -849,4 +875,64 @@ async def test_p110_device_connect_alternative_type():
         mock_p110.assert_called_once_with("192.168.1.100")
         mock_p115.assert_called_once_with("192.168.1.100")
         mock_device.get_device_info.assert_called_once()
-        assert device.device == mock_device 
+        assert device.device == mock_device
+
+
+@pytest.mark.asyncio
+async def test_base_device_turn_on_when_disconnected():
+    """Test turn_on when device is not connected."""
+    device = TestTapoDevice(
+        name="test", ip="127.0.0.1", email="test@example.com", password="test"
+    )
+    # Device is not initialized
+    device.device = None
+    
+    # Should not raise an exception
+    await device.turn_on()
+    
+    # Assert that the device property is still None
+    assert device.device is None
+
+
+@pytest.mark.asyncio
+async def test_base_device_turn_off_when_disconnected():
+    """Test turn_off when device is not connected."""
+    device = TestTapoDevice(
+        name="test", ip="127.0.0.1", email="test@example.com", password="test"
+    )
+    # Device is not initialized
+    device.device = None
+    
+    # Should not raise an exception
+    await device.turn_off()
+    
+    # Assert that the device property is still None
+    assert device.device is None
+
+
+@pytest.mark.asyncio
+async def test_base_device_turn_on_calls_device_on():
+    """Test that turn_on calls the device.on method."""
+    device = TestTapoDevice(
+        name="test", ip="127.0.0.1", email="test@example.com", password="test"
+    )
+    mock_device = AsyncMock()
+    device.device = mock_device
+    
+    await device.turn_on()
+    
+    mock_device.on.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_base_device_turn_off_calls_device_off():
+    """Test that turn_off calls the device.off method."""
+    device = TestTapoDevice(
+        name="test", ip="127.0.0.1", email="test@example.com", password="test"
+    )
+    mock_device = AsyncMock()
+    device.device = mock_device
+    
+    await device.turn_off()
+    
+    mock_device.off.assert_called_once() 

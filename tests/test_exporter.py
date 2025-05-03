@@ -513,4 +513,210 @@ async def test_exporter_device_operation_error_handling(
     exporter.add_device(mock_device)
     
     await exporter.update_metrics()
-    mock_device.get_current_power.assert_called_once() 
+    mock_device.get_current_power.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_exporter_calculate_cost():
+    """Test the calculate_cost method."""
+    devices = [MagicMock()]
+    exporter = TapoExporter(devices)
+    
+    # Test with 1000 Wh (1 kWh)
+    cost = exporter.calculate_cost(1000)
+    assert cost == 0.12  # COST_PER_KWH is 0.12 in the code
+    
+    # Test with 500 Wh (0.5 kWh)
+    cost = exporter.calculate_cost(500)
+    assert cost == 0.06
+    
+    # Test with 0 Wh
+    cost = exporter.calculate_cost(0)
+    assert cost == 0
+
+
+@pytest.mark.asyncio
+async def test_exporter_zero_voltage_handling():
+    """Test handling of zero voltage in update_metrics."""
+    # Set up a mock device
+    device = MagicMock()
+    device.name = "test_device"
+    device.device = True  # Connected
+    
+    # Set up power info with zero voltage
+    power_info = MagicMock()
+    power_info.voltage = 0
+    power_info.current_power = 2000  # High power for 240V test
+    power_info.current = 10000  # 10A in milliamps
+    power_info.power_factor = 0.9
+    
+    # Set up normal device and usage info
+    device_info = {"model": "P110", "hw_ver": "1.0"}
+    usage_info = MagicMock()
+    usage_info.today_energy = 1000
+    usage_info.month_energy = 30000
+    
+    # Mock the device methods as async
+    device.get_device_info = AsyncMock(return_value=device_info)
+    device.get_current_power = AsyncMock(return_value=power_info)
+    device.get_device_usage = AsyncMock(return_value=usage_info)
+    
+    # Create exporter with the mock device
+    exporter = TapoExporter([device])
+    
+    # Execute update_metrics
+    await exporter.update_metrics()
+    
+    # Check if high-power device gets 240V by default
+    assert exporter.last_power_readings[device.name] == 2000
+    
+    # Now test with low power (should default to 120V)
+    power_info.current_power = 100  # Low power
+    await exporter.update_metrics()
+
+
+@pytest.mark.asyncio
+async def test_exporter_init_tracking_during_update():
+    """Test initialization of tracking dictionaries during update_metrics."""
+    # Set up mock device
+    device = MagicMock()
+    device.name = "new_device"
+    device.device = True
+    
+    # Set up normal device, power, and usage info
+    device_info = {"model": "P110", "hw_ver": "1.0"}
+    power_info = MagicMock()
+    power_info.voltage = 120
+    power_info.current_power = 100
+    power_info.current = 1000
+    power_info.power_factor = 0.9
+    
+    usage_info = MagicMock()
+    usage_info.today_energy = 1000
+    usage_info.month_energy = 30000
+    
+    # Mock the device methods
+    device.get_device_info.return_value = device_info
+    device.get_current_power.return_value = power_info
+    device.get_device_usage.return_value = usage_info
+    
+    # Create exporter without devices
+    exporter = TapoExporter([])
+    
+    # Add the device after initialization
+    exporter.devices.append(device)
+    
+    # Execute update_metrics
+    await exporter.update_metrics()
+    
+    # Check if tracking dictionaries were initialized
+    assert device.name in exporter.last_update_time
+    assert device.name in exporter.last_power_readings
+    assert device.name in exporter.accumulated_energy
+    assert device.name in exporter.daily_cost
+
+
+@pytest.mark.asyncio
+async def test_exporter_energy_calculation():
+    """Test energy and cost calculation in update_metrics."""
+    # Set up mock device
+    device = MagicMock()
+    device.name = "test_device"
+    device.device = True
+    
+    # Set up normal device, power, and usage info
+    device_info = {"model": "P110", "hw_ver": "1.0"}
+    power_info = MagicMock()
+    power_info.voltage = 120
+    power_info.current_power = 100  # 100W
+    power_info.current = 833  # ~833mA at 120V
+    power_info.power_factor = 0.9
+    
+    usage_info = MagicMock()
+    usage_info.today_energy = 1000
+    usage_info.month_energy = 30000
+    
+    # Mock the device methods as async
+    device.get_device_info = AsyncMock(return_value=device_info)
+    device.get_current_power = AsyncMock(return_value=power_info)
+    device.get_device_usage = AsyncMock(return_value=usage_info)
+    
+    # Create exporter with the mock device
+    exporter = TapoExporter([device])
+    
+    # Initialize tracking for the device
+    current_time = asyncio.get_event_loop().time()
+    exporter.last_update_time[device.name] = current_time - 3600  # 1 hour ago
+    exporter.last_power_readings[device.name] = 100  # Same power as current
+    exporter.accumulated_energy[device.name] = 0
+    exporter.daily_cost[device.name] = 0
+    
+    # Execute update_metrics
+    await exporter.update_metrics()
+    
+    # Check energy calculation (100W for 1 hour = 100Wh)
+    assert exporter.accumulated_energy[device.name] == pytest.approx(100, rel=0.1)
+    
+    # Check cost calculation (100Wh = 0.1kWh, at $0.12/kWh = $0.012)
+    assert exporter.daily_cost[device.name] == pytest.approx(0.012, rel=0.1)
+
+
+@pytest.mark.asyncio
+async def test_exporter_start_and_stop():
+    """Test the start and stop methods."""
+    # Create a mock device with async methods
+    device = MagicMock()
+    device.name = "test_device"
+    device.device = AsyncMock()
+    device.get_device_info = AsyncMock(return_value={"model": "test"})
+    device.get_current_power = AsyncMock(return_value=MagicMock(
+        current_power=100,
+        voltage=120,
+        current=1000,
+        power_factor=0.9
+    ))
+    device.get_device_usage = AsyncMock(return_value=MagicMock(
+        today_energy=1000,
+        month_energy=10000,
+        today_runtime=60,
+        month_runtime=600,
+        power_saved=100,
+        power_protection=False,
+        overcurrent_protection=False,
+        overheat_protection=False,
+        signal_strength=80
+    ))
+    
+    # Create the exporter with mocked InfluxDB client
+    with patch("influxdb_client.InfluxDBClient") as mock_influx, \
+         patch("prometheus_client.start_http_server") as mock_start_server:
+        mock_write_api = MagicMock()
+        mock_influx.return_value.write_api = mock_write_api
+        exporter = TapoExporter([device])
+        
+        # Mock connect_devices
+        exporter.connect_devices = AsyncMock()
+        
+        # Start the exporter
+        task = asyncio.create_task(exporter.start(port=9999))
+        
+        # Wait for server to start
+        await asyncio.sleep(0.1)
+        
+        # Verify server was started
+        mock_start_server.assert_called_once_with(9999)
+        
+        # Cancel the task after a short delay
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        
+        # Stop the exporter
+        await exporter.stop()
+        
+        # Verify tasks were cancelled if they exist
+        if hasattr(exporter, "_tasks") and exporter._tasks:
+            for task in exporter._tasks:
+                assert task.cancelled() 
