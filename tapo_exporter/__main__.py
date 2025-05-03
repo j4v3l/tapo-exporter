@@ -125,6 +125,7 @@ def get_devices_from_env() -> List[P110Device]:
 
 async def main():
     """Main entry point for the Tapo exporter."""
+    exporter = None
     try:
         # Start Prometheus HTTP server
         port = int(os.getenv("PROMETHEUS_PORT", "8000"))
@@ -174,10 +175,17 @@ async def main():
                 await exporter.update_metrics()
             except KeyboardInterrupt:
                 # This is needed for test_main_keyboard_interrupt
-                logger.info("Exiting gracefully...")
-                # Re-raise to reach outer handler
-                raise
+                logger.info("Keyboard interrupt received. Exiting gracefully...")
+                # Stop the exporter before exiting
+                if exporter:
+                    await exporter.stop()
+                # Don't re-raise, just return to exit gracefully
+                return
             except asyncio.CancelledError:
+                logger.info("Cancellation received. Exiting gracefully...")
+                # Stop the exporter before re-raising
+                if exporter:
+                    await exporter.stop()
                 # Re-raise CancelledError directly to the test
                 raise
             except Exception as e:
@@ -186,9 +194,16 @@ async def main():
                 # Then continue the loop
     except KeyboardInterrupt:
         # This is needed for test_main_keyboard_interrupt
-        logger.info("Exiting gracefully...")
+        logger.info("Exiting gracefully due to keyboard interrupt...")
+        if exporter:
+            await exporter.stop()
     except Exception as e:
         logger.error(f"Fatal error: {str(e)}")
+        # Ensure we stop the exporter on any fatal error
+        if exporter:
+            await exporter.stop()
+        # Re-raise the exception for test_main_cleanup_on_error
+        raise
 
 
 if __name__ == "__main__":
