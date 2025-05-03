@@ -177,6 +177,9 @@ async def test_exporter_start_error(mock_devices, mock_influx_client):
         assert mock_start_server.call_args_list[0] == call(0)
         assert mock_start_server.call_args_list[1] == call(0)
 
+        # Verify connect_devices was called
+        exporter.connect_devices.assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_exporter_stop(mock_devices, mock_influx_client):
@@ -288,8 +291,11 @@ async def test_exporter_start_error_handling(mock_influx_client):
         assert mock_start_server.call_args_list[0] == call(0)
         assert mock_start_server.call_args_list[1] == call(0)
         
-        # Verify warning was logged
+        # Verify warning was logged for port in use
         mock_logger.warning.assert_called_once()
+        
+        # Verify connect_devices was called
+        exporter.connect_devices.assert_called_once()
 
 
 @pytest.mark.asyncio
