@@ -353,10 +353,15 @@ class TapoExporter:
                     logger.error(f"Failed to start Prometheus server: {str(e)}")
                     raise  # Re-raise the exception to ensure the error is propagated
             else:
+                logger.error(f"Failed to start HTTP server: {str(e)}")
                 raise
         
         # Connect to all devices
-        await self.connect_devices()
+        try:
+            await self.connect_devices()
+        except Exception as e:
+            logger.error(f"Failed to connect to devices: {str(e)}")
+            raise
         
         # Start metrics update loop
         while True:
