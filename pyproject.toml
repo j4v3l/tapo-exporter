@@ -78,4 +78,14 @@ asyncio_default_fixture_loop_scope = "function"
 asyncio_default_test_loop_scope = "function"
 
 [tool.hatch.build.targets.wheel]
-packages = ["tapo_exporter"] 
+packages = ["tapo_exporter"]
+
+[tool.sonar]
+projectKey = "tapo-exporter"
+projectName = "Tapo Exporter"
+projectVersion = "0.1.0"
+sources = ["tapo_exporter"]
+tests = ["tests"]
+sourceEncoding = "UTF-8"
+python.version = "3.8"
+python.coverage.reportPaths = [".coverage"] 
