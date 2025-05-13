@@ -1,0 +1,58 @@
+name: 📝 Manual Release Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v0.2.0)'
+        required: true
+        default: ''
+      publish:
+        description: 'Publish release? (true/false)'
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  update-release:
+    name: 📋 Update and Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      # Create or update the release draft
+      - name: 📝 Create/Update Release Draft
+        id: release-drafter
+        uses: release-drafter/release-drafter@v5
+        with:
+          config-name: release-drafter.yml
+          version: ${{ github.event.inputs.version }}
+          publish: ${{ github.event.inputs.publish }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 🔄 Update CHANGELOG.md
+        run: |
+          # Get the release notes from the previous step
+          RELEASE_NOTES='${{ steps.release-drafter.outputs.body }}'
+          VERSION='${{ github.event.inputs.version }}'
+          
+          # Get current date
+          DATE=$(date +%Y-%m-%d)
+          
+          # Create a temporary file with the notes
+          echo "$RELEASE_NOTES" > temp_notes.md
+          
+          # Update CHANGELOG.md
+          sed -i "/## \[Unreleased\]/a \\\n## [$VERSION] - $DATE\n\n$(cat temp_notes.md)\n" CHANGELOG.md
+          rm temp_notes.md
+          
+          # Commit and push changes
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add CHANGELOG.md
+          git commit -m "Update CHANGELOG.md for $VERSION" || echo "No changes to commit"
+          git push 

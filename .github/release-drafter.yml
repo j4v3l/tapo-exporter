@@ -70,4 +70,4 @@ template: |
   docker pull j4v3l/tapo-exporter:v$RESOLVED_VERSION
   ```
 
-  **Full Changelog**: https://github.com/j4v3l/tapo/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+  **Full Changelog**: https://github.com/j4v3l/tapo-exporter/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
