@@ -1,5 +1,9 @@
 # Tapo Exporter
 
+[![CI/CD Pipeline](https://github.com/j4v3l/tapo-exporter/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/j4v3l/tapo-exporter/actions/workflows/ci-cd.yml)
+[![Docker Build](https://github.com/j4v3l/tapo-exporter/actions/workflows/docker-build.yml/badge.svg)](https://github.com/j4v3l/tapo-exporter/actions/workflows/docker-build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A Prometheus and InfluxDB exporter for Tapo smart devices, built on top of the [mihai-dinculescu/tapo](https://github.com/mihai-dinculescu/tapo) library.
 
 ## Device Support
@@ -224,6 +228,114 @@ The exporter automatically writes metrics to InfluxDB if configured. The followi
 ## License
 
 MIT License
+
+## CI/CD Pipeline
+
+This project uses GitHub Actions to implement a comprehensive CI/CD pipeline. The workflows can be found in the `.github/workflows` directory.
+
+### CI/CD Workflow Diagram
+
+```
+┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
+│                 │      │                 │      │                 │
+│  Code Changes   │──────▶    CI Tests     │──────▶  Docker Build   │
+│                 │      │                 │      │                 │
+└─────────────────┘      └─────────────────┘      └────────┬────────┘
+                                                           │
+                                                           ▼
+┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
+│                 │      │                 │      │                 │
+│    Release      │◀─────│   Production    │◀─────│   Development   │
+│                 │      │   Deployment    │      │   Deployment    │
+└─────────────────┘      └─────────────────┘      └─────────────────┘
+```
+
+### 🚀 CI/CD Workflows
+
+#### Main Pipeline (ci-cd.yml)
+
+The main CI/CD pipeline runs on every push and PR, and includes:
+
+- 💎 **Code Quality Checks**: Formatting (Black), imports (isort), linting (flake8), and type checking (mypy)
+- 🧪 **Test Suite**: Runs tests against multiple Python versions (3.9, 3.10, 3.11)
+- 🛡️ **Security Scans**: Runs Bandit for security issues and Safety for dependency vulnerabilities
+- 🏗️ **Docker Build**: Creates and publishes multi-architecture Docker images
+- 🚀 **Deployment**: Deploys to development (dev branch) or production (tags) environments
+- 📦 **Release Creation**: Automatically creates GitHub releases with changelog and download instructions
+
+#### Docker Build (docker-build.yml)
+
+A dedicated workflow for Docker image building and security scanning:
+
+- 🏗️ **Docker Image Building**: Creates multi-architecture container images (amd64, arm64, armv7)
+- 🛡️ **Container Security Scanning**: Uses Trivy to scan for vulnerabilities
+- 📋 **Docker Compose Validation**: Validates docker-compose configuration files
+
+#### Test & Quality (test.yml)
+
+A focused workflow for testing and code quality:
+
+- 🧹 **Code Style & Linting**: Checks formatting, imports, linting, and typing
+- 🧪 **Test Suite**: Runs tests with coverage reporting
+- 🛡️ **Security Scanning**: Checks code and dependencies for security issues
+
+#### Deployment (deploy.yml)
+
+Manages deployments to different environments:
+
+- 🚀 **Multi-environment Deployment**: Supports development, staging, and production environments
+- 🌐 **Server Configuration**: Automatically configures servers for deployment
+- ✅ **Health Checks**: Verifies successful deployments
+
+### 📋 GitHub Templates
+
+The repository includes templates to standardize contributions:
+
+- 📝 **Pull Request Template**: Standardized PR format with checklists
+- 🐛 **Bug Report Template**: Structured format for reporting bugs
+- ✨ **Feature Request Template**: Template for proposing new features
+
+### 🔒 Security Policy
+
+A SECURITY.md file documents:
+
+- Supported versions
+- Vulnerability reporting process
+- Response timeframe
+- Security best practices
+
+### 👥 Code Ownership
+
+A CODEOWNERS file defines code ownership and reviewers for different parts of the codebase.
+
+### 📦 Dependency Management
+
+Automated dependency updates with Dependabot for:
+
+- Python dependencies
+- GitHub Actions
+- Docker base images
+
+## Contributing
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on the process for submitting pull requests.
+
+### Setting Up CI/CD
+
+If you fork this repository, you'll need to set up the following secrets in your GitHub repository settings to make the CI/CD workflows work:
+
+1. **DOCKERHUB_USERNAME**: Your Docker Hub username
+2. **DOCKERHUB_TOKEN**: Your Docker Hub access token
+3. **CODECOV_TOKEN**: Your Codecov token (optional, for coverage reporting)
+4. **DEV_SSH_PRIVATE_KEY**: SSH private key for deployment to development
+5. **PROD_SSH_PRIVATE_KEY**: SSH private key for deployment to production
+
+For each environment (development, staging, production), you'll also need:
+
+- **{ENV}_SSH_HOST**: The host to deploy to
+- **{ENV}_SSH_USER**: The SSH user for deployment
+- **{ENV}_DEPLOY_PATH**: The path on the server to deploy to
+- **{ENV}_DEPLOY_URL**: The URL where the application will be available
 
 ### Building and Publishing to Docker Hub
 
