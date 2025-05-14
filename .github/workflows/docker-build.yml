@@ -49,7 +49,7 @@ jobs:
             type=ref,event=pr
 
       - name: 🏭 Build only (no push)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: false
