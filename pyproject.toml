@@ -66,6 +66,9 @@ disallow_untyped_defs = true
 check_untyped_defs = true
 ignore_missing_imports = true
 plugins = ["pydantic.mypy"]
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = "$MYPY_CONFIG_FILE_DIR"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -88,4 +91,4 @@ sources = ["tapo_exporter"]
 tests = ["tests"]
 sourceEncoding = "UTF-8"
 python.version = "3.8"
-python.coverage.reportPaths = [".coverage"] 
+python.coverage.reportPaths = [".coverage"]
