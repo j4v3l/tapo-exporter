@@ -69,7 +69,7 @@ def get_devices_from_env() -> List[P110Device]:
     except ValueError:
         logger.error(f"Invalid TAPO_DEVICE_COUNT value: {device_count_str}")
         return devices
-    
+
     logger.debug(f"Device count from env: {device_count}")
 
     for i in range(1, device_count + 1):
@@ -92,7 +92,7 @@ def get_devices_from_env() -> List[P110Device]:
             ip = ip_env
             email = email_env
             password = password_env
-            
+
             if device_type in ["p110", "p115"]:
                 devices.append(
                     P110Device(name=name, ip=ip, email=email, password=password)
@@ -108,8 +108,7 @@ def get_devices_from_env() -> List[P110Device]:
                 )
         else:
             logger.warning(
-                f"Missing configuration for device {i}. "
-                "Skipping this device."
+                f"Missing configuration for device {i}. " "Skipping this device."
             )
             logger.debug("Missing values:")
             if not name_env:
@@ -135,7 +134,7 @@ async def main() -> None:
         except ValueError:
             logger.error(f"Invalid PROMETHEUS_PORT value: {port_str}")
             return
-            
+
         start_http_server(port)
         logger.info(f"Started Prometheus metrics server on port {port}")
 

@@ -101,9 +101,8 @@ class P110Device:
                 logger.debug("Attempting to get device info with alternative type")
                 if self.device:  # Check to ensure device is not None
                     device_info = await self.device.get_device_info()
-                    logger.info(
-                        f"Successfully connected using alternative type {alternative_type}"
-                    )
+                    alt_msg = f"Successfully connected using alternative type {alternative_type}"
+                    logger.info(alt_msg)
                     logger.info(f"Device model: {device_info.model}")
                     logger.info(f"Device firmware: {device_info.fw_ver}")
 

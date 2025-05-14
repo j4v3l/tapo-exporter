@@ -36,7 +36,9 @@ class TapoExporter:
         # Store last power readings for energy calculation
         self.last_power_readings: Dict[str, int] = {}
         self.last_update_time: Dict[str, float] = {}
-        self.accumulated_energy: Dict[str, float] = {}  # Store accumulated energy for each device
+        self.accumulated_energy: Dict[str, float] = (
+            {}
+        )  # Store accumulated energy for each device
         self.daily_cost: Dict[str, float] = {}  # Store daily cost for each device
 
         # Initialize dictionaries for existing devices
@@ -164,7 +166,8 @@ class TapoExporter:
                         f"month_runtime={getattr(usage_info, 'month_runtime', 0)}min, "
                         f"power_saved={getattr(usage_info, 'power_saved', 0)}Wh, "
                         f"power_protection={getattr(usage_info, 'power_protection', False)}, "
-                        f"overcurrent_protection={getattr(usage_info, 'overcurrent_protection', False)}, "
+                        f"overcurrent_protection="
+                        f"{getattr(usage_info, 'overcurrent_protection', False)}, "
                         f"overheat_protection={getattr(usage_info, 'overheat_protection', False)}, "
                         f"signal_strength={getattr(usage_info, 'signal_strength', 0)}"
                     )

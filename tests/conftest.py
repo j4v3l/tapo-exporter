@@ -1,4 +1,5 @@
 """Test configuration file."""
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -46,4 +47,4 @@ def mock_exporter():
     exporter = MagicMock(spec=TapoExporter)
     exporter.metrics = MagicMock(spec=TapoMetrics)
     exporter.devices = []
-    return exporter 
+    return exporter
