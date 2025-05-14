@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def convert_to_sarif(bandit_json_file, sarif_output_file):
@@ -31,7 +31,7 @@ def convert_to_sarif(bandit_json_file, sarif_output_file):
                     {
                         "executionSuccessful": True,
                         "commandLine": "bandit -r tapo_exporter/",
-                        "endTimeUtc": datetime.utcnow().isoformat(),
+                        "endTimeUtc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                         "workingDirectory": {
                             "uri": "file:///"
                         }
