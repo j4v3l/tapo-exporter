@@ -4,7 +4,6 @@ import os
 import subprocess
 
 from dotenv import load_dotenv
-
 from tapo import ApiClient
 from tapo.requests import EnergyDataInterval
 
@@ -56,7 +55,8 @@ async def main():
     print(f"Overcurrent Status: {info_json['overcurrent_status']}")
     print(f"Overheat Status: {info_json['overheat_status']}")
     print(
-        f"Signal Strength: Level {info_json['signal_level']} (RSSI: {info_json['rssi']} dBm)"
+        f"Signal Strength: Level {info_json['signal_level']} "
+        f"(RSSI: {info_json['rssi']} dBm)"
     )
     print(f"Device Runtime: {info_json['on_time']} seconds")
     print(f"Device Model: {info_json['model']}")
