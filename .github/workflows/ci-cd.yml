@@ -107,12 +107,16 @@ jobs:
       - name: 🔍 Run Bandit Security Scan
         run: |
           pip install bandit
+          # Run bandit and generate JSON output
           bandit -r tapo_exporter/ -f json -o bandit-results.json || true
+
+          # Convert JSON to SARIF using our converter script
+          python .github/convert_bandit_to_sarif.py bandit-results.json bandit-results.sarif
 
       - name: 📄 Upload Security Scan Results
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: bandit-results.json
+          sarif_file: bandit-results.sarif
           category: bandit
 
       - name: 🔍 Run dependency security check
