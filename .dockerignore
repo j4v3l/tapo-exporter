@@ -1,0 +1,39 @@
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.env
+
+# Development
+tests/
+*.log
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+
+# Build
+*.egg-info/
+dist/
+build/
+
+# Local development files
+docker-compose.yml
+Dockerfile
+README.md
+CONTRIBUTING.md
+CHANGELOG.md
+LICENSE
+
+# Grafana
+grafana/provisioning/dashboards/DASHBOARD_STRUCTURE.md

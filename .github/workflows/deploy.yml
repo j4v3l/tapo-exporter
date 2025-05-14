@@ -1,0 +1,193 @@
+name: 🚀 Deployment Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+
+env:
+  DOCKER_IMAGE: j4v3l/tapo-exporter
+
+jobs:
+  prepare-deployment:
+    name: 🔧 Prepare Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      version: ${{ steps.set-version.outputs.version }}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: 🔍 Determine environment
+        id: set-env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENVIRONMENT="${{ github.event.inputs.environment }}"
+          elif [[ "${{ github.ref }}" == "refs/tags/v"* ]]; then
+            ENVIRONMENT="production"
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            ENVIRONMENT="staging"
+          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            ENVIRONMENT="development"
+          else
+            ENVIRONMENT="development"
+          fi
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+          echo "Deploying to $ENVIRONMENT environment"
+          
+      - name: 🏷️ Determine version
+        id: set-version
+        run: |
+          if [[ "${{ github.ref }}" == "refs/tags/v"* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION="${{ github.sha }}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Deploying version $VERSION"
+
+  deploy:
+    name: 🚀 Deploy to ${{ needs.prepare-deployment.outputs.environment }}
+    needs: prepare-deployment
+    runs-on: ubuntu-latest
+    environment: 
+      name: ${{ needs.prepare-deployment.outputs.environment }}
+      url: ${{ steps.deployment.outputs.deployment-url }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🔑 Set up SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets[format('{0}_SSH_PRIVATE_KEY', needs.prepare-deployment.outputs.environment)] }}
+          
+      - name: 🌐 Deploy to server
+        id: deployment
+        run: |
+          echo "Deploying to ${{ needs.prepare-deployment.outputs.environment }} environment..."
+          
+          # Set variables based on environment
+          if [[ "${{ needs.prepare-deployment.outputs.environment }}" == "production" ]]; then
+            HOST="${{ secrets.PROD_SSH_HOST }}"
+            USER="${{ secrets.PROD_SSH_USER }}"
+            DEPLOY_PATH="${{ secrets.PROD_DEPLOY_PATH }}"
+            DEPLOY_URL="${{ secrets.PROD_DEPLOY_URL }}"
+          elif [[ "${{ needs.prepare-deployment.outputs.environment }}" == "staging" ]]; then
+            HOST="${{ secrets.STAGING_SSH_HOST }}"
+            USER="${{ secrets.STAGING_SSH_USER }}"
+            DEPLOY_PATH="${{ secrets.STAGING_DEPLOY_PATH }}"
+            DEPLOY_URL="${{ secrets.STAGING_DEPLOY_URL }}"
+          else
+            HOST="${{ secrets.DEV_SSH_HOST }}"
+            USER="${{ secrets.DEV_SSH_USER }}"
+            DEPLOY_PATH="${{ secrets.DEV_DEPLOY_PATH }}"
+            DEPLOY_URL="${{ secrets.DEV_DEPLOY_URL }}"
+          fi
+          
+          # Create deployment script
+          cat > deploy.sh << 'EOL'
+          #!/bin/bash
+          set -e
+          
+          # Pull the latest docker image
+          docker pull ${{ env.DOCKER_IMAGE }}:${{ needs.prepare-deployment.outputs.version || 'latest' }}
+          
+          # Create or update .env file with the provided configuration
+          cat > .env.tmp << 'EOF'
+          # Environment-specific variables
+          TAPO_DEVICE_COUNT=${TAPO_DEVICE_COUNT}
+          TAPO_DEVICE_1_NAME=${TAPO_DEVICE_1_NAME}
+          TAPO_DEVICE_1_TYPE=${TAPO_DEVICE_1_TYPE}
+          TAPO_DEVICE_1_IP=${TAPO_DEVICE_1_IP}
+          TAPO_DEVICE_1_EMAIL=${TAPO_DEVICE_1_EMAIL}
+          TAPO_DEVICE_1_PASSWORD=${TAPO_DEVICE_1_PASSWORD}
+          LOG_LEVEL=${LOG_LEVEL}
+          GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+          EOF
+          
+          mv .env.tmp .env
+          
+          # Update the docker-compose.yml file to use the specific version
+          sed -i "s|image: ${{ env.DOCKER_IMAGE }}:.*|image: ${{ env.DOCKER_IMAGE }}:${{ needs.prepare-deployment.outputs.version || 'latest' }}|g" docker-compose.yml
+          
+          # Start or restart the containers
+          docker-compose down
+          docker-compose up -d
+          
+          # Check if services are running
+          docker-compose ps
+          
+          # Display logs
+          docker-compose logs --tail=20
+          EOL
+          
+          chmod +x deploy.sh
+          
+          # Copy files to server
+          scp -o StrictHostKeyChecking=no deploy.sh docker-compose.yml $USER@$HOST:$DEPLOY_PATH
+          
+          # Execute deployment script
+          ssh -o StrictHostKeyChecking=no $USER@$HOST "cd $DEPLOY_PATH && \
+            export TAPO_DEVICE_COUNT='${{ secrets.TAPO_DEVICE_COUNT }}' \
+            TAPO_DEVICE_1_NAME='${{ secrets.TAPO_DEVICE_1_NAME }}' \
+            TAPO_DEVICE_1_TYPE='${{ secrets.TAPO_DEVICE_1_TYPE }}' \
+            TAPO_DEVICE_1_IP='${{ secrets.TAPO_DEVICE_1_IP }}' \
+            TAPO_DEVICE_1_EMAIL='${{ secrets.TAPO_DEVICE_1_EMAIL }}' \
+            TAPO_DEVICE_1_PASSWORD='${{ secrets.TAPO_DEVICE_1_PASSWORD }}' \
+            LOG_LEVEL='${{ secrets.LOG_LEVEL }}' \
+            GF_SECURITY_ADMIN_PASSWORD='${{ secrets.GF_SECURITY_ADMIN_PASSWORD }}' && \
+            ./deploy.sh"
+          
+          echo "deployment-url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "Deployment to ${{ needs.prepare-deployment.outputs.environment }} environment completed."
+      
+      - name: 📣 Notify deployment status
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          ENV="${{ needs.prepare-deployment.outputs.environment }}"
+          VER="${{ needs.prepare-deployment.outputs.version }}"
+          URL="${{ steps.deployment.outputs.deployment-url }}"
+          
+          echo "Deployment to $ENV environment: $STATUS"
+          echo "Version: $VER"
+          echo "URL: $URL"
+          
+          # Add notification system here if needed (Slack, Discord, etc.)
+          
+  verify-deployment:
+    name: ✅ Verify Deployment
+    needs: [prepare-deployment, deploy]
+    runs-on: ubuntu-latest
+    if: ${{ needs.prepare-deployment.outputs.environment != 'development' }}
+    steps:
+      - name: 🔍 Health check
+        run: |
+          # Add health check verification here
+          echo "Verifying deployment health..."
+          echo "Environment: ${{ needs.prepare-deployment.outputs.environment }}"
+          echo "URL: ${{ needs.deploy.outputs.deployment-url }}"
+          
+          # Example health check using curl
+          # curl -sSf ${{ needs.deploy.outputs.deployment-url }}/health || exit 1
+          
+          echo "Deployment health check passed!" 

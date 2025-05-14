@@ -1,0 +1,27 @@
+name: Release Drafter (Dev)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Copy config to workspace
+        run: |
+          mkdir -p .github/temp
+          cp .github/release-drafter.yml .github/temp/
+          
+      - name: Run Release Drafter
+        uses: release-drafter/release-drafter@v5
+        with:
+          config-name: temp/release-drafter.yml
+          disable-autolabeler: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

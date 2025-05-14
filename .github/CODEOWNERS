@@ -1,0 +1,21 @@
+# These owners will be the default owners for everything in the repo.
+# Unless a later match takes precedence, @j4v3l will be requested for
+# review when someone opens a pull request.
+*       @j4v3l
+
+# CI/CD workflow files
+/.github/workflows/   @j4v3l
+
+# Core application code
+/tapo_exporter/       @j4v3l
+
+# Tests
+/tests/               @j4v3l
+
+# Docker and deployment configurations
+/Dockerfile           @j4v3l
+/docker-compose.yml   @j4v3l
+
+# Documentation
+/docs/                @j4v3l
+/*.md                 @j4v3l 

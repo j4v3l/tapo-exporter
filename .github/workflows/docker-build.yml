@@ -1,0 +1,134 @@
+name: 🐳 Docker Build & Security Scan
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'requirements.txt'
+      - 'tapo_exporter/**'
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'requirements.txt'
+      - 'tapo_exporter/**'
+  schedule:
+    # Run weekly to check for vulnerabilities
+    - cron: '0 0 * * 0'  # Midnight on Sunday
+  workflow_dispatch:
+
+env:
+  DOCKER_IMAGE: j4v3l/tapo-exporter
+  PLATFORMS: linux/amd64,linux/arm64,linux/arm/v7
+
+jobs:
+  docker-build:
+    name: 🏗️ Build Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🛠️ Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: ${{ env.PLATFORMS }}
+
+      - name: 🔖 Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_IMAGE }}
+          tags: |
+            type=sha,format=short
+            type=ref,event=branch
+            type=ref,event=pr
+
+      - name: 🏭 Build only (no push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          platforms: ${{ env.PLATFORMS }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache
+          outputs: type=docker,dest=/tmp/docker-image.tar
+
+      - name: 📦 Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/docker-image.tar
+          retention-days: 1
+
+  security-scan:
+    name: 🛡️ Security Scan
+    runs-on: ubuntu-latest
+    needs: docker-build
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 📥 Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp
+          
+      - name: 🔄 Load Docker image
+        run: |
+          docker load --input /tmp/docker-image.tar
+          docker image ls --all
+  
+      - name: 🔖 Get image reference
+        id: image_ref
+        run: |
+          IMAGE_REF=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${{ env.DOCKER_IMAGE }}" | head -n 1)
+          echo "IMAGE_REF=$IMAGE_REF" >> $GITHUB_OUTPUT
+          echo "Using Docker image: $IMAGE_REF"
+        
+      - name: 🔍 Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.image_ref.outputs.IMAGE_REF }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+          
+      - name: 🔬 Run Trivy for SARIF report
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.image_ref.outputs.IMAGE_REF }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          
+      - name: 📊 Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy'
+          
+  docker-compose-validate:
+    name: 📋 Validate Docker Compose
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: ✅ Validate docker-compose.yml
+        run: docker-compose config -q
+        
+      - name: 🧪 Validate with docker-compose-validate
+        run: |
+          pip install docker-compose-validate
+          docker-compose-validate docker-compose.yml 

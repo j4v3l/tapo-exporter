@@ -5,21 +5,33 @@ Thank you for your interest in contributing to Tapo Exporter! This document prov
 ## Development Environment Setup
 
 1. Fork and clone the repository
-2. Create a virtual environment:
+2. Choose your development environment:
+
+   ### Option 1: Local Development
+
+   Create a virtual environment:
 
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. Install development dependencies:
+   Install development dependencies:
 
    ```bash
    pip install -e ".[dev]"
    ```
 
-4. Copy `.env.example` to `.env` and configure your environment variables
-5. Install pre-commit hooks:
+   ### Option 2: Docker Development
+
+   Build and start the development environment:
+
+   ```bash
+   docker-compose -f docker-compose.dev.yml up -d
+   ```
+
+3. Copy `.env.example` to `.env` and configure your environment variables
+4. Install pre-commit hooks:
 
    ```bash
    pre-commit install
@@ -45,7 +57,7 @@ flake8
 
 ## Testing
 
-1. Run tests:
+1. Run tests locally:
 
    ```bash
    pytest
@@ -55,6 +67,18 @@ flake8
 
    ```bash
    pytest --cov=tapo_exporter
+   ```
+
+3. Run tests in Docker:
+
+   ```bash
+   docker-compose -f docker-compose.dev.yml run tapo-exporter pytest
+   ```
+
+4. Run tests with coverage in Docker:
+
+   ```bash
+   docker-compose -f docker-compose.dev.yml run tapo-exporter pytest --cov=tapo_exporter
    ```
 
 ## Pull Request Process
