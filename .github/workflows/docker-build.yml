@@ -57,7 +57,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache
-          outputs: type=docker,dest=/tmp/docker-image.tar
+          outputs: type=oci,dest=/tmp/docker-image.tar
 
       - name: 📦 Upload artifact
         uses: actions/upload-artifact@v4
@@ -73,25 +73,30 @@ jobs:
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
-        
+
       - name: 📥 Download Docker image
         uses: actions/download-artifact@v4
         with:
           name: docker-image
           path: /tmp
-          
+
       - name: 🔄 Load Docker image
         run: |
-          docker load --input /tmp/docker-image.tar
+          # Load OCI-formatted image
+          docker load < /tmp/docker-image.tar
           docker image ls --all
-  
+
       - name: 🔖 Get image reference
         id: image_ref
         run: |
           IMAGE_REF=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${{ env.DOCKER_IMAGE }}" | head -n 1)
+          # If no image found with proper tag, use the image ID
+          if [ -z "$IMAGE_REF" ]; then
+            IMAGE_REF=$(docker images --format "{{.ID}}" | head -n 1)
+          fi
           echo "IMAGE_REF=$IMAGE_REF" >> $GITHUB_OUTPUT
           echo "Using Docker image: $IMAGE_REF"
-        
+
       - name: 🔍 Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -101,7 +106,7 @@ jobs:
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
-          
+
       - name: 🔬 Run Trivy for SARIF report
         uses: aquasecurity/trivy-action@master
         with:
@@ -111,24 +116,24 @@ jobs:
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH,MEDIUM'
-          
+
       - name: 📊 Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
           category: 'trivy'
-          
+
   docker-compose-validate:
     name: 📋 Validate Docker Compose
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
-        
+
       - name: ✅ Validate docker-compose.yml
         run: docker-compose config -q
-        
+
       - name: 🧪 Validate with docker-compose-validate
         run: |
           pip install docker-compose-validate
-          docker-compose-validate docker-compose.yml 
+          docker-compose-validate docker-compose.yml
