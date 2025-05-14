@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
 import json
 import sys
+import uuid
+import os
 from datetime import datetime, timezone
 
 
 def convert_to_sarif(bandit_json_file, sarif_output_file):
     """
-    Convert Bandit JSON output to SARIF format.
+    Convert Bandit JSON output to SARIF format compatible with GitHub Code Scanning.
     """
     # Load the Bandit JSON output
     with open(bandit_json_file, "r") as f:
         bandit_data = json.load(f)
+
+    # Get repository information from environment variables if available
+    repo_name = os.environ.get("GITHUB_REPOSITORY", "unknown/repository")
+    base_ref = os.environ.get("GITHUB_BASE_REF", "")
+    sha = os.environ.get("GITHUB_SHA", "")
+    repo_url = f"https://github.com/{repo_name}"
 
     # Create SARIF format
     sarif_output = {
@@ -39,6 +47,17 @@ def convert_to_sarif(bandit_json_file, sarif_output_file):
                         "workingDirectory": {"uri": "file:///"},
                     }
                 ],
+                "versionControlProvenance": [
+                    {
+                        "repositoryUri": repo_url,
+                        "revisionId": sha,
+                        "branch": base_ref if base_ref else None,
+                    }
+                ],
+                # Add run.automationDetails object with SARIF run ID
+                "automationDetails": {
+                    "id": f"bandit/{uuid.uuid4()}"
+                },
             }
         ],
     }
@@ -57,6 +76,7 @@ def convert_to_sarif(bandit_json_file, sarif_output_file):
                 "shortDescription": {"text": test_name},
                 "fullDescription": {"text": result.get("issue_text", "")},
                 "defaultConfiguration": {"level": "warning"},
+                "helpUri": f"https://bandit.readthedocs.io/en/latest/plugins/index.html#{test_id.lower()}",
             }
 
             sarif_output["runs"][0]["tool"]["driver"]["rules"].append(rule)
@@ -71,6 +91,11 @@ def convert_to_sarif(bandit_json_file, sarif_output_file):
         elif result.get("issue_severity", "").lower() == "low":
             level = "note"
 
+        # Get file path relative to repository
+        filename = result.get("filename", "")
+        if filename.startswith("/"):
+            filename = os.path.relpath(filename)
+
         # Add result
         sarif_result = {
             "ruleId": test_id,
@@ -81,7 +106,8 @@ def convert_to_sarif(bandit_json_file, sarif_output_file):
                 {
                     "physicalLocation": {
                         "artifactLocation": {
-                            "uri": result.get("filename", "").replace("\\", "/")
+                            "uri": filename.replace("\\", "/"),
+                            "uriBaseId": "%SRCROOT%"
                         },
                         "region": {
                             "startLine": result.get("line_number", 1),
@@ -90,6 +116,10 @@ def convert_to_sarif(bandit_json_file, sarif_output_file):
                     }
                 }
             ],
+            # Add fingerprint to help GitHub track issues
+            "fingerprints": {
+                "primaryFingerprint": f"{test_id}/{filename}/{result.get('line_number', 1)}",
+            },
         }
 
         sarif_output["runs"][0]["results"].append(sarif_result)
