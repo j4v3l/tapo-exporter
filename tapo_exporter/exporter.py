@@ -5,11 +5,9 @@ import logging
 import os
 import traceback
 from typing import Dict, List, Optional
-
 from influxdb_client import InfluxDBClient
 from influxdb_client.client.write_api import SYNCHRONOUS
 from prometheus_client import start_http_server
-
 from .devices.p110 import P110Device
 from .metrics import TapoMetrics
 

@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import os
 import subprocess
-
 from dotenv import load_dotenv
 from tapo import ApiClient
 from tapo.requests import EnergyDataInterval

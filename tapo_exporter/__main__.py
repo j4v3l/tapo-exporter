@@ -5,10 +5,8 @@ import logging
 import os
 import signal
 from typing import List, Optional
-
 from dotenv import load_dotenv
 from prometheus_client import start_http_server
-
 from .devices.p110 import P110Device
 from .exporter import TapoExporter
 

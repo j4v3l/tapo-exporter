@@ -2,9 +2,7 @@
 
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, call, patch
-
 import pytest
-
 from tapo_exporter.exporter import TapoExporter
 
 

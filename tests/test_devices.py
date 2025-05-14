@@ -2,9 +2,7 @@
 
 import tempfile
 from unittest.mock import AsyncMock, MagicMock, call, patch
-
 import pytest
-
 from tapo_exporter.devices.base import BaseTapoDevice
 from tapo_exporter.devices.p110 import P110Device
 

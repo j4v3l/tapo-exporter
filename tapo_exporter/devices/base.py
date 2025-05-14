@@ -1,7 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
-
 from tapo import ApiClient
 
 logger = logging.getLogger(__name__)

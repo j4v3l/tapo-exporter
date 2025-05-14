@@ -6,9 +6,7 @@ import asyncio
 import signal
 import unittest.mock  # Import the module directly
 from unittest.mock import AsyncMock, MagicMock, call, patch
-
 import pytest
-
 from tapo_exporter import __main__
 from tapo_exporter.exporter import TapoExporter
 

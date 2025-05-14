@@ -1,10 +1,8 @@
 """Tests for the metrics module."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
 from prometheus_client import CollectorRegistry
-
 from tapo_exporter.metrics import TapoMetrics
 
 

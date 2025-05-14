@@ -10,7 +10,6 @@ import logging
 import os
 import time
 from typing import Any, Dict, Optional, cast
-
 from tapo import ApiClient
 
 logger = logging.getLogger(__name__)

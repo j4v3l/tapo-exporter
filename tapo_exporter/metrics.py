@@ -1,8 +1,6 @@
 import logging
 from typing import Optional
-
 from prometheus_client import CollectorRegistry, Gauge
-
 from .devices.p110 import P110Device
 
 logger = logging.getLogger(__name__)
