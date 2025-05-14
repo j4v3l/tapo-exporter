@@ -1,11 +1,12 @@
 import base64
-import hashlib
+# import hashlib  # Unused import
 import logging
-import time
+# import time  # Unused import
+import os
 import uuid
 import requests
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
+# from Crypto.Cipher import AES  # Unused import
+# from Crypto.Random import get_random_bytes  # Deprecated
 
 # Configure logging
 logging.basicConfig(
@@ -16,7 +17,8 @@ logging.basicConfig(
 
 
 def generate_klap_key():
-    return base64.b64encode(get_random_bytes(16)).decode()
+    # Use os.urandom instead of deprecated Crypto.Random.get_random_bytes
+    return base64.b64encode(os.urandom(16)).decode()
 
 
 def main():

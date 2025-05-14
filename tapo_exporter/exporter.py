@@ -163,10 +163,12 @@ class TapoExporter:
                         f"today_runtime={getattr(usage_info, 'today_runtime', 0)}min, "
                         f"month_runtime={getattr(usage_info, 'month_runtime', 0)}min, "
                         f"power_saved={getattr(usage_info, 'power_saved', 0)}Wh, "
-                        f"power_protection={getattr(usage_info, 'power_protection', False)}, "
+                        f"power_protection="
+                        f"{getattr(usage_info, 'power_protection', False)}, "
                         f"overcurrent_protection="
                         f"{getattr(usage_info, 'overcurrent_protection', False)}, "
-                        f"overheat_protection={getattr(usage_info, 'overheat_protection', False)}, "
+                        f"overheat_protection="
+                        f"{getattr(usage_info, 'overheat_protection', False)}, "
                         f"signal_strength={getattr(usage_info, 'signal_strength', 0)}"
                     )
                 except Exception as e:
@@ -315,10 +317,13 @@ class TapoExporter:
                     self.write_api.write(bucket="tapo", record=point)
                     logger.info(
                         f"Wrote metrics to InfluxDB for device {device_name}: "
-                        f"power={power}W, voltage={voltage}V, current={current:.2f}A, "
-                        f"today_energy={today_energy}Wh, month_energy={month_energy}Wh, "
+                        f"power={power}W, voltage={voltage}V, "
+                        f"current={current:.2f}A, "
+                        f"today_energy={today_energy}Wh, "
+                        f"month_energy={month_energy}Wh, "
                         f"accumulated={self.accumulated_energy[device_name]:.4f}Wh, "
-                        f"today_cost=${today_cost:.4f}, month_cost=${month_cost:.4f}"
+                        f"today_cost=${today_cost:.4f}, "
+                        f"month_cost=${month_cost:.4f}"
                     )
 
                 except Exception as e:
