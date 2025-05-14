@@ -392,7 +392,7 @@ async def test_main_keyboard_interrupt(monkeypatch):
         patch("tapo_exporter.__main__.start_http_server"),
         patch("asyncio.get_event_loop"),
         patch("tapo_exporter.__main__.logger") as mock_logger,
-        patch("asyncio.sleep", side_effect=KeyboardInterrupt)
+        patch("asyncio.sleep", side_effect=KeyboardInterrupt),
     ):
         await __main__.main()
         # Check logger calls
