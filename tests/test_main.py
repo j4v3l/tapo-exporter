@@ -511,16 +511,11 @@ async def test_main_with_invalid_port(monkeypatch):
         patch("asyncio.get_event_loop"),
         patch("tapo_exporter.__main__.logger") as mock_logger
     ):
-        # Catch the ValueError that will be raised
-        try:
-            await __main__.main()
-        except ValueError:
-            # Expected exception for invalid port, continue with assertions
-            pass
+        await __main__.main()
             
         # Verify the error was logged properly
         mock_logger.error.assert_called_with(
-            "Fatal error: invalid literal for int() with base 10: 'invalid'"
+            "Invalid PROMETHEUS_PORT value: invalid"
         )
 
 
