@@ -19,7 +19,7 @@ jobs:
           cp .github/release-drafter.yml .github/temp/
           
       - name: Run Release Drafter
-        uses: release-drafter/release-drafter@v5
+        uses: release-drafter/release-drafter@v6
         with:
           config-name: temp/release-drafter.yml
           disable-autolabeler: false
