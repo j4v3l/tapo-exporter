@@ -22,8 +22,10 @@ def convert_to_sarif(bandit_json_file, sarif_output_file):
                     "driver": {
                         "name": "Bandit",
                         "informationUri": "https://github.com/PyCQA/bandit",
-                        "semanticVersion": bandit_data.get("metadata", {}).get("version", "1.0.0"),
-                        "rules": []
+                        "semanticVersion": bandit_data.get("metadata", {}).get(
+                            "version", "1.0.0"
+                        ),
+                        "rules": [],
                     }
                 },
                 "results": [],
@@ -31,14 +33,14 @@ def convert_to_sarif(bandit_json_file, sarif_output_file):
                     {
                         "executionSuccessful": True,
                         "commandLine": "bandit -r tapo_exporter/",
-                        "endTimeUtc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-                        "workingDirectory": {
-                            "uri": "file:///"
-                        }
+                        "endTimeUtc": datetime.now(timezone.utc)
+                        .isoformat()
+                        .replace("+00:00", "Z"),
+                        "workingDirectory": {"uri": "file:///"},
                     }
-                ]
+                ],
             }
-        ]
+        ],
     }
 
     # Process Bandit results into SARIF
@@ -52,19 +54,15 @@ def convert_to_sarif(bandit_json_file, sarif_output_file):
             rule = {
                 "id": test_id,
                 "name": test_name,
-                "shortDescription": {
-                    "text": test_name
-                },
-                "fullDescription": {
-                    "text": result.get("issue_text", "")
-                },
-                "defaultConfiguration": {
-                    "level": "warning"
-                }
+                "shortDescription": {"text": test_name},
+                "fullDescription": {"text": result.get("issue_text", "")},
+                "defaultConfiguration": {"level": "warning"},
             }
 
             sarif_output["runs"][0]["tool"]["driver"]["rules"].append(rule)
-            rule_indices[test_id] = len(sarif_output["runs"][0]["tool"]["driver"]["rules"]) - 1
+            rule_indices[test_id] = (
+                len(sarif_output["runs"][0]["tool"]["driver"]["rules"]) - 1
+            )
 
         # Map Bandit severity to SARIF level
         level = "warning"
@@ -78,9 +76,7 @@ def convert_to_sarif(bandit_json_file, sarif_output_file):
             "ruleId": test_id,
             "ruleIndex": rule_indices[test_id],
             "level": level,
-            "message": {
-                "text": result.get("issue_text", "")
-            },
+            "message": {"text": result.get("issue_text", "")},
             "locations": [
                 {
                     "physicalLocation": {
@@ -89,11 +85,11 @@ def convert_to_sarif(bandit_json_file, sarif_output_file):
                         },
                         "region": {
                             "startLine": result.get("line_number", 1),
-                            "startColumn": 1
-                        }
+                            "startColumn": 1,
+                        },
                     }
                 }
-            ]
+            ],
         }
 
         sarif_output["runs"][0]["results"].append(sarif_result)
