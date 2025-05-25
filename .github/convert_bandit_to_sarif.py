@@ -55,9 +55,7 @@ def convert_to_sarif(bandit_json_file, sarif_output_file):
                     }
                 ],
                 # Add run.automationDetails object with SARIF run ID
-                "automationDetails": {
-                    "id": f"bandit/{uuid.uuid4()}"
-                },
+                "automationDetails": {"id": f"bandit/{uuid.uuid4()}"},
             }
         ],
     }
@@ -107,7 +105,7 @@ def convert_to_sarif(bandit_json_file, sarif_output_file):
                     "physicalLocation": {
                         "artifactLocation": {
                             "uri": filename.replace("\\", "/"),
-                            "uriBaseId": "%SRCROOT%"
+                            "uriBaseId": "%SRCROOT%",
                         },
                         "region": {
                             "startLine": result.get("line_number", 1),
