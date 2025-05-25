@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import json
+import os
 import sys
 import uuid
-import os
 from datetime import datetime, timezone
 
 
