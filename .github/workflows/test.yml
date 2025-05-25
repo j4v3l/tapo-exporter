@@ -116,8 +116,11 @@ jobs:
 
       - name: 🔍 Run Bandit security scan
         run: |
-          bandit -r tapo_exporter/ -f sarif -o bandit-results.sarif || true
-          bandit -r tapo_exporter/ -f txt || true
+          bandit -r tapo_exporter/ -f sarif -o bandit-results.sarif
+          bandit -r tapo_exporter/ -f txt
+
+      - name: 🗂️ List files in workspace
+        run: ls -al
 
       - name: 📄 Upload Security Scan Results
         uses: github/codeql-action/upload-sarif@v3
