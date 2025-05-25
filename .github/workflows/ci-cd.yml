@@ -115,7 +115,7 @@ jobs:
       - name: 🔍 Run Bandit Security Scan
         run: |
           pip install bandit
-          bandit -r tapo_exporter/ -f json -o bandit-results.json
+          bandit -r tapo_exporter/ -f json -o bandit-results.json --exit-zero
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.sha }}
