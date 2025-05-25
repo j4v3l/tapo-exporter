@@ -246,11 +246,11 @@ jobs:
           images: ${{ env.DOCKER_IMAGE }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
-            type=ref,event=branch
             type=sha,format=short
+            type=semver,pattern={{version}}
+            type=ref,event=branch
 
       - name: 🛠️ Build and push
         uses: docker/build-push-action@v5
