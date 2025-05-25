@@ -2,6 +2,8 @@
 
 [![CI/CD Pipeline](https://github.com/j4v3l/tapo-exporter/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/j4v3l/tapo-exporter/actions/workflows/ci-cd.yml)
 [![Docker Build](https://github.com/j4v3l/tapo-exporter/actions/workflows/docker-build.yml/badge.svg)](https://github.com/j4v3l/tapo-exporter/actions/workflows/docker-build.yml)
+[![Docker Pulls](https://img.shields.io/docker/pulls/j4v3l/tapo-exporter.svg)](https://hub.docker.com/r/j4v3l/tapo-exporter)
+[![Docker Stars](https://img.shields.io/docker/stars/j4v3l/tapo-exporter.svg)](https://hub.docker.com/r/j4v3l/tapo-exporter)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A Prometheus and InfluxDB exporter for Tapo smart devices, built on top of the [mihai-dinculescu/tapo](https://github.com/mihai-dinculescu/tapo) library.
