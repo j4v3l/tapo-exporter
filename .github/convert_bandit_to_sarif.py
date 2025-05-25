@@ -21,6 +21,13 @@ def convert_to_sarif(bandit_json_file, sarif_output_file):
     repo_url = f"https://github.com/{repo_name}"
 
     # Create SARIF format
+    vcp = {
+        "repositoryUri": repo_url,
+        "revisionId": sha,
+    }
+    if base_ref:
+        vcp["branch"] = base_ref
+
     sarif_output = {
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
         "version": "2.1.0",
@@ -47,13 +54,7 @@ def convert_to_sarif(bandit_json_file, sarif_output_file):
                         "workingDirectory": {"uri": "file:///"},
                     }
                 ],
-                "versionControlProvenance": [
-                    {
-                        "repositoryUri": repo_url,
-                        "revisionId": sha,
-                        "branch": base_ref if base_ref else None,
-                    }
-                ],
+                "versionControlProvenance": [vcp],
                 # Add run.automationDetails object with SARIF run ID
                 "automationDetails": {"id": f"bandit/{uuid.uuid4()}"},
             }
