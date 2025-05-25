@@ -125,10 +125,7 @@ jobs:
         run: |
           python3 .github/convert_bandit_to_sarif.py bandit-results.json bandit-results.sarif
 
-      - name: 🗂️ List files in workspace
-        run: ls -al
-
-      - name: 📄 Upload Security Scan Results
+      - name: 📄 Upload Bandit Security Scan Results
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: bandit-results.sarif
@@ -136,6 +133,23 @@ jobs:
           token: ${{ github.token }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
+
+      - name: 🔍 Run Semgrep Security Scan
+        run: |
+          pip install semgrep
+          semgrep --config=auto --sarif --output=semgrep-results.sarif tapo_exporter/
+
+      - name: 📄 Upload Semgrep Security Scan Results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep-results.sarif
+          category: semgrep
+          token: ${{ github.token }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: 🗂️ List files in workspace
+        run: ls -al
 
       - name: 🔍 Run dependency security check
         run: |
