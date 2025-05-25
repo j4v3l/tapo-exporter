@@ -345,7 +345,7 @@ jobs:
           echo "docker_image=${{ env.DOCKER_IMAGE }}:v$version" >> $GITHUB_OUTPUT
 
       - name: 📝 Generate release notes
-        uses: release-drafter/release-drafter@v5
+        uses: release-drafter/release-drafter@v6
         with:
           version: v${{ steps.tag_version.outputs.version }}
           tag: v${{ steps.tag_version.outputs.version }}
