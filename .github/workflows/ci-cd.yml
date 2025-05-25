@@ -115,11 +115,7 @@ jobs:
       - name: 🔍 Run Bandit Security Scan
         run: |
           pip install bandit
-          # Run bandit and generate JSON output
-          bandit -r tapo_exporter/ -f json -o bandit-results.json || true
-
-          # Convert JSON to SARIF using our converter script
-          python .github/convert_bandit_to_sarif.py bandit-results.json bandit-results.sarif
+          bandit -r tapo_exporter/ -f sarif -o bandit-results.sarif || true
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.sha }}
