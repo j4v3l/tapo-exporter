@@ -14,6 +14,9 @@ RUN apt-get update && apt-get install -y \
 RUN mkdir -p /var/log/tapo && \
   chmod 755 /var/log/tapo
 
+# Update setuptools to a secure version
+RUN pip install --upgrade setuptools
+
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -29,4 +32,4 @@ ENV LOG_DIR=/var/log/tapo
 EXPOSE 8000
 
 # Run the application
-CMD ["python", "-m", "tapo_exporter"] 
+CMD ["python", "-m", "tapo_exporter"]
