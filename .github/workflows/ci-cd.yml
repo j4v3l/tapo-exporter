@@ -200,11 +200,6 @@ jobs:
       - name: ✅ Validate docker-compose.yml
         run: docker compose config -q
 
-      - name: 🧪 Validate with docker-compose-validate
-        run: |
-          pip install docker-compose-validate
-          docker-compose-validate docker-compose.yml
-
   build-and-push:
     name: 🏗️ Build & Push Docker Image
     runs-on: ubuntu-latest

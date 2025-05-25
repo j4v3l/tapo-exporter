@@ -170,11 +170,6 @@ jobs:
       - name: ✅ Validate docker-compose.yml
         run: docker compose config -q
 
-      - name: 🧪 Validate with docker-compose-validate
-        run: |
-          pip install docker-compose-validate
-          docker-compose-validate docker-compose.yml
-
   python-security-scan:
     name: 🐍 Python Security Scan
     runs-on: ubuntu-latest
