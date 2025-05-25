@@ -1,9 +1,10 @@
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
-from tapo import ApiClient
 import logging
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Optional
+from tapo import ApiClient
 
 logger = logging.getLogger(__name__)
+
 
 class BaseTapoDevice(ABC):
     def __init__(self, name: str, ip: str, email: str, password: str):
@@ -12,7 +13,7 @@ class BaseTapoDevice(ABC):
         self.email = email
         self.password = password
         self.client: Optional[ApiClient] = None
-        self.device = None
+        self.device: Any = None
         logger.info(f"Initialized {self.__class__.__name__}: {name} at {ip}")
 
     async def connect(self) -> None:
@@ -27,7 +28,7 @@ class BaseTapoDevice(ABC):
             raise
 
     @abstractmethod
-    async def _get_device(self):
+    async def _get_device(self) -> Any:
         """Get the specific device instance"""
         pass
 
@@ -59,4 +60,4 @@ class BaseTapoDevice(ABC):
     @property
     def is_connected(self) -> bool:
         """Check if device is connected"""
-        return self.device is not None 
+        return self.device is not None

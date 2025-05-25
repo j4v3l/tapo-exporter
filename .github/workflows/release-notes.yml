@@ -10,6 +10,9 @@ on:
   # Manual trigger
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   update-release-draft:
     name: 📋 Update Release Draft
@@ -22,13 +25,13 @@ jobs:
           disable-autolabeler: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: 📥 Checkout code
         if: github.event_name == 'workflow_dispatch'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
+
       - name: 🔄 Update CHANGELOG.md (manually triggered only)
         if: github.event_name == 'workflow_dispatch'
         run: |
@@ -36,20 +39,20 @@ jobs:
           RELEASE_NOTES=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                          "https://api.github.com/repos/${{ github.repository }}/releases" \
                          | jq -r '.[] | select(.draft==true) | .body' | head -n 1)
-          
+
           VERSION=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                   "https://api.github.com/repos/${{ github.repository }}/releases" \
                   | jq -r '.[] | select(.draft==true) | .tag_name' | head -n 1)
-          
+
           # Get current date
           DATE=$(date +%Y-%m-%d)
-          
+
           # Update CHANGELOG.md
           sed -i "/## \[Unreleased\]/a \\\n## [$VERSION] - $DATE\n\n$RELEASE_NOTES\n" CHANGELOG.md
-          
+
           # Commit and push changes
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add CHANGELOG.md
           git commit -m "Update CHANGELOG.md for $VERSION" || echo "No changes to commit"
-          git push 
+          git push

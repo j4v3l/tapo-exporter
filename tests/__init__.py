@@ -1,1 +1,1 @@
-"""Test package for tapo-exporter.""" 
+"""Test package for tapo-exporter."""

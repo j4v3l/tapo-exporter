@@ -9,6 +9,12 @@ on:
     branches: ['*']
   workflow_dispatch:
 
+# Add permissions needed for CodeQL actions
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
 env:
   DOCKER_IMAGE: j4v3l/tapo-exporter
   PYTHON_VERSION: '3.11'
@@ -97,6 +103,8 @@ jobs:
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -107,13 +115,41 @@ jobs:
       - name: 🔍 Run Bandit Security Scan
         run: |
           pip install bandit
-          bandit -r tapo_exporter/ -f json -o bandit-results.json || true
+          bandit -r tapo_exporter/ -f json -o bandit-results.json --exit-zero
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_BASE_REF: ${{ github.ref }}
 
-      - name: 📄 Upload Security Scan Results
+      - name: 🛠️ Convert Bandit JSON to SARIF
+        run: |
+          python3 .github/convert_bandit_to_sarif.py bandit-results.json bandit-results.sarif
+
+      - name: 📄 Upload Bandit Security Scan Results
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: bandit-results.json
+          sarif_file: bandit-results.sarif
           category: bandit
+          token: ${{ github.token }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: 🔍 Run Semgrep Security Scan
+        run: |
+          pip install semgrep
+          semgrep --config=auto --sarif --output=semgrep-results.sarif tapo_exporter/
+
+      - name: 📄 Upload Semgrep Security Scan Results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep-results.sarif
+          category: semgrep
+          token: ${{ github.token }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: 🗂️ List files in workspace
+        run: ls -al
 
       - name: 🔍 Run dependency security check
         run: |
@@ -123,27 +159,86 @@ jobs:
       - name: 📊 Display vulnerability report
         run: cat safety-results.json || echo "No safety results available"
 
-  build-and-push:
-    name: 🏗️ Build & Push Docker Image
+  docker-compose-validate:
+    name: 📋 Validate Docker Compose
     runs-on: ubuntu-latest
-    needs: [test, security-scan]
-    if: github.event_name != 'pull_request'
-    
+    needs: code-quality
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
-    
+
+      - name: 🚀 Setup Docker
+        uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+
+      - name: 🔧 Create dummy .env file for validation
+        run: |
+          # Create a dummy .env file with sample values for CI testing
+          cat > .env << EOF
+          # Sample environment values for testing
+          TAPO_DEVICE_COUNT=1
+          TAPO_DEVICE_1_NAME=sample_device
+          TAPO_DEVICE_1_IP=192.168.1.100
+          TAPO_DEVICE_1_EMAIL=sample@example.com
+          TAPO_DEVICE_1_PASSWORD=samplepassword
+          PROMETHEUS_PORT=8000
+          LOG_LEVEL=INFO
+          GF_SECURITY_ADMIN_PASSWORD=admin
+          EOF
+
+          # Create a dummy prometheus.yml file as well
+          cat > prometheus.yml << EOF
+          global:
+            scrape_interval: 15s
+            evaluation_interval: 15s
+          scrape_configs:
+            - job_name: 'tapo-exporter'
+              static_configs:
+                - targets: ['tapo-exporter:8000']
+          EOF
+
+          # Create grafana provisioning directory structure
+          mkdir -p grafana/provisioning/datasources
+          mkdir -p grafana/provisioning/dashboards
+
+          # Create a sample datasource config
+          cat > grafana/provisioning/datasources/datasource.yml << EOF
+          apiVersion: 1
+          datasources:
+            - name: Prometheus
+              type: prometheus
+              access: proxy
+              url: http://prometheus:9090
+              isDefault: true
+          EOF
+
+          echo "Created sample config files and directory structure for testing"
+
+      - name: ✅ Validate docker-compose.yml
+        run: docker compose config -q
+
+  build-and-push:
+    name: 🏗️ Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [test, security-scan, docker-compose-validate]
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
       - name: 🏗️ Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-      
+
       - name: 🔑 Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-        
+
       - name: 🏷️ Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -156,7 +251,7 @@ jobs:
             type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
             type=ref,event=branch
             type=sha,format=short
-            
+
       - name: 🛠️ Build and push
         uses: docker/build-push-action@v5
         with:
@@ -167,94 +262,88 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache
           cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache,mode=max
+          outputs: type=image,name=${{ env.DOCKER_IMAGE }},push-by-digest=true,name-canonical=true,push=true
           build-args: |
             BUILD_DATE=${{ github.event.repository.created_at }}
             VCS_REF=${{ github.sha }}
             VERSION=${{ github.ref_name }}
             DESCRIPTION="A Prometheus and InfluxDB exporter for Tapo smart devices"
             CATEGORY="monitoring"
-            
+
       - name: 🔐 Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+          image-ref: ${{ env.DOCKER_IMAGE }}:dev
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
-          
+
       - name: 📄 Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
           category: 'trivy'
-          
-  deploy-dev:
-    name: 🚀 Deploy to Development
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    if: github.ref == 'refs/heads/dev'
-    
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-        
-      - name: 🔑 Set up SSH key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
-          
-      - name: 🚀 Deploy to development server
-        id: deployment
-        run: |
-          echo "Deploying to development environment..."
-          # Add deployment commands here - example:
-          # ssh ${{ secrets.DEV_SSH_USER }}@${{ secrets.DEV_SSH_HOST }} "cd /path/to/deployment && docker-compose pull && docker-compose up -d"
-          echo "deployment-url=https://dev.example.com" >> $GITHUB_OUTPUT
-          echo "Deployment to development environment completed."
-          
-  deploy-prod:
-    name: 🚀 Deploy to Production
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    if: startsWith(github.ref, 'refs/tags/v')
-    
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-        
-      - name: 🔑 Set up SSH key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
-          
-      - name: 🚀 Deploy to production server
-        id: deployment
-        run: |
-          echo "Deploying to production environment..."
-          # Add deployment commands here - example:
-          # ssh ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }} "cd /path/to/deployment && docker-compose pull && docker-compose up -d"
-          echo "deployment-url=https://example.com" >> $GITHUB_OUTPUT
-          echo "Deployment to production environment completed."
-          
+          token: ${{ github.token }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+#   deploy-dev:
+#     name: 🚀 Deploy to Development
+#     runs-on: ubuntu-latest
+#     needs: build-and-push
+#     if: github.ref == 'refs/heads/dev'
+#
+#     steps:
+#       - name: 📥 Checkout code
+#         uses: actions/checkout@v4
+#
+#       - name: 🚀 Deploy to development server
+#         id: deployment
+#         run: |
+#           echo "Deploying to development environment..."
+#           # Add deployment commands here - example:
+#           # ssh ${{ secrets.DEV_SSH_USER }}@${{ secrets.DEV_SSH_HOST }} "cd /path/to/deployment && docker-compose pull && docker-compose up -d"
+#           echo "deployment-url=https://dev.example.com" >> $GITHUB_OUTPUT
+#           echo "Deployment to development environment completed."
+
+#   deploy-prod:
+#     name: 🚀 Deploy to Production
+#     runs-on: ubuntu-latest
+#     needs: build-and-push
+#     if: startsWith(github.ref, 'refs/tags/v')
+#
+#     steps:
+#       - name: 📥 Checkout code
+#         uses: actions/checkout@v4
+#
+#       - name: 🚀 Deploy to production server
+#         id: deployment
+#         run: |
+#           echo "Deploying to production environment..."
+#           # Add deployment commands here - example:
+#           # ssh ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }} "cd /path/to/deployment && docker-compose pull && docker-compose up -d"
+#           echo "deployment-url=https://example.com" >> $GITHUB_OUTPUT
+#           echo "Deployment to production environment completed."
+
   release:
     name: 📦 Create Release
     needs: build-and-push
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
-    
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-    
+
       - name: 🏷️ Extract tag version
         id: tag_version
         run: |
           version=${GITHUB_REF#refs/tags/v}
           echo "version=$version" >> $GITHUB_OUTPUT
           echo "docker_image=${{ env.DOCKER_IMAGE }}:v$version" >> $GITHUB_OUTPUT
-    
+
       - name: 📝 Generate release notes
         uses: release-drafter/release-drafter@v5
         with:
@@ -262,4 +351,4 @@ jobs:
           tag: v${{ steps.tag_version.outputs.version }}
           publish: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

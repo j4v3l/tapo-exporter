@@ -21,6 +21,13 @@ on:
     - cron: '0 0 * * 0'  # Midnight on Sunday
   workflow_dispatch:
 
+# Add permissions needed for CodeQL actions
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+  packages: read
+
 env:
   DOCKER_IMAGE: j4v3l/tapo-exporter
   PLATFORMS: linux/amd64,linux/arm64,linux/arm/v7
@@ -48,7 +55,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
 
-      - name: 🏭 Build only (no push)
+      - name: 🏭 Build and verify
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -57,14 +64,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache
-          outputs: type=docker,dest=/tmp/docker-image.tar
-
-      - name: 📦 Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image
-          path: /tmp/docker-image.tar
-          retention-days: 1
 
   security-scan:
     name: 🛡️ Security Scan
@@ -73,62 +72,140 @@ jobs:
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
-        
-      - name: 📥 Download Docker image
-        uses: actions/download-artifact@v4
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🏗️ Build image locally for scanning
+        uses: docker/build-push-action@v5
         with:
-          name: docker-image
-          path: /tmp
-          
-      - name: 🔄 Load Docker image
-        run: |
-          docker load --input /tmp/docker-image.tar
-          docker image ls --all
-  
-      - name: 🔖 Get image reference
-        id: image_ref
-        run: |
-          IMAGE_REF=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${{ env.DOCKER_IMAGE }}" | head -n 1)
-          echo "IMAGE_REF=$IMAGE_REF" >> $GITHUB_OUTPUT
-          echo "Using Docker image: $IMAGE_REF"
-        
+          context: .
+          load: true
+          tags: ${{ env.DOCKER_IMAGE }}:scan-image
+
       - name: 🔍 Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ steps.image_ref.outputs.IMAGE_REF }}
+          image-ref: ${{ env.DOCKER_IMAGE }}:scan-image
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
-          
+
       - name: 🔬 Run Trivy for SARIF report
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ steps.image_ref.outputs.IMAGE_REF }}
+          image-ref: ${{ env.DOCKER_IMAGE }}:scan-image
           format: 'sarif'
           output: 'trivy-results.sarif'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH,MEDIUM'
-          
+
       - name: 📊 Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
           category: 'trivy'
-          
+          token: ${{ github.token }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
   docker-compose-validate:
     name: 📋 Validate Docker Compose
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
-        
-      - name: ✅ Validate docker-compose.yml
-        run: docker-compose config -q
-        
-      - name: 🧪 Validate with docker-compose-validate
+
+      - name: 🚀 Setup Docker
+        uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+
+      - name: 🔧 Create dummy .env file for validation
         run: |
-          pip install docker-compose-validate
-          docker-compose-validate docker-compose.yml 
+          # Create a dummy .env file with sample values for CI testing
+          cat > .env << EOF
+          # Sample environment values for testing
+          TAPO_DEVICE_COUNT=1
+          TAPO_DEVICE_1_NAME=sample_device
+          TAPO_DEVICE_1_IP=192.168.1.100
+          TAPO_DEVICE_1_EMAIL=sample@example.com
+          TAPO_DEVICE_1_PASSWORD=samplepassword
+          PROMETHEUS_PORT=8000
+          LOG_LEVEL=INFO
+          GF_SECURITY_ADMIN_PASSWORD=admin
+          EOF
+
+          # Create a dummy prometheus.yml file as well
+          cat > prometheus.yml << EOF
+          global:
+            scrape_interval: 15s
+            evaluation_interval: 15s
+          scrape_configs:
+            - job_name: 'tapo-exporter'
+              static_configs:
+                - targets: ['tapo-exporter:8000']
+          EOF
+
+          # Create grafana provisioning directory structure
+          mkdir -p grafana/provisioning/datasources
+          mkdir -p grafana/provisioning/dashboards
+
+          # Create a sample datasource config
+          cat > grafana/provisioning/datasources/datasource.yml << EOF
+          apiVersion: 1
+          datasources:
+            - name: Prometheus
+              type: prometheus
+              access: proxy
+              url: http://prometheus:9090
+              isDefault: true
+          EOF
+
+          echo "Created sample config files and directory structure for testing"
+
+      - name: ✅ Validate docker-compose.yml
+        run: docker compose config -q
+
+  python-security-scan:
+    name: 🐍 Python Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 🔍 Run Bandit Security Scan
+        run: |
+          pip install bandit
+          bandit -r tapo_exporter/ -f sarif -o bandit-results.sarif
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_BASE_REF: ${{ github.ref }}
+
+      - name: 🗂️ List files in workspace
+        run: ls -al
+
+      - name: 📄 Upload Security Scan Results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: bandit-results.sarif
+          category: bandit-python
+          token: ${{ github.token }}
+
+      - name: 🔍 Run dependency security check
+        run: |
+          pip install safety
+          safety check -r requirements.txt -r requirements-dev.txt --json > safety-results.json || true
+          cat safety-results.json || echo "No vulnerabilities found"

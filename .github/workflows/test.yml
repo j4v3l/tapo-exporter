@@ -116,13 +116,16 @@ jobs:
 
       - name: 🔍 Run Bandit security scan
         run: |
-          bandit -r tapo_exporter/ -f json -o bandit-results.json || true
-          bandit -r tapo_exporter/ -f txt || true
+          bandit -r tapo_exporter/ -f sarif -o bandit-results.sarif
+          bandit -r tapo_exporter/ -f txt
+
+      - name: 🗂️ List files in workspace
+        run: ls -al
 
       - name: 📄 Upload Security Scan Results
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: bandit-results.json
+          sarif_file: bandit-results.sarif
           category: bandit
 
       - name: 🔬 Check dependencies for vulnerabilities
@@ -134,4 +137,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: safety-results
-          path: safety-results.json 
+          path: safety-results.json

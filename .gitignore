@@ -70,7 +70,7 @@ logs/
 log/
 
 # Test files
-# test/
+test/test_kasa.py
 # tests/
 # *.test.py
 # *_test.py
@@ -165,7 +165,7 @@ config.yml
 *.class
 *.jar
 *.war
-*.ear 
+*.ear
 pyproject.toml
 rust/.env.example
 rust/Cargo.lock

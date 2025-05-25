@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   tapo-exporter:
     build: .
@@ -100,4 +98,4 @@ volumes:
 
 networks:
   monitoring:
-    driver: bridge 
+    driver: bridge

@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
+
       - name: 🔍 Determine environment
         id: set-env
         run: |
@@ -51,7 +51,7 @@ jobs:
           fi
           echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
           echo "Deploying to $ENVIRONMENT environment"
-          
+
       - name: 🏷️ Determine version
         id: set-version
         run: |
@@ -67,24 +67,19 @@ jobs:
     name: 🚀 Deploy to ${{ needs.prepare-deployment.outputs.environment }}
     needs: prepare-deployment
     runs-on: ubuntu-latest
-    environment: 
+    environment:
       name: ${{ needs.prepare-deployment.outputs.environment }}
       url: ${{ steps.deployment.outputs.deployment-url }}
-    
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
-        
-      - name: 🔑 Set up SSH key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets[format('{0}_SSH_PRIVATE_KEY', needs.prepare-deployment.outputs.environment)] }}
-          
+
       - name: 🌐 Deploy to server
         id: deployment
         run: |
           echo "Deploying to ${{ needs.prepare-deployment.outputs.environment }} environment..."
-          
+
           # Set variables based on environment
           if [[ "${{ needs.prepare-deployment.outputs.environment }}" == "production" ]]; then
             HOST="${{ secrets.PROD_SSH_HOST }}"
@@ -102,15 +97,15 @@ jobs:
             DEPLOY_PATH="${{ secrets.DEV_DEPLOY_PATH }}"
             DEPLOY_URL="${{ secrets.DEV_DEPLOY_URL }}"
           fi
-          
+
           # Create deployment script
           cat > deploy.sh << 'EOL'
           #!/bin/bash
           set -e
-          
+
           # Pull the latest docker image
           docker pull ${{ env.DOCKER_IMAGE }}:${{ needs.prepare-deployment.outputs.version || 'latest' }}
-          
+
           # Create or update .env file with the provided configuration
           cat > .env.tmp << 'EOF'
           # Environment-specific variables
@@ -123,28 +118,28 @@ jobs:
           LOG_LEVEL=${LOG_LEVEL}
           GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
           EOF
-          
+
           mv .env.tmp .env
-          
+
           # Update the docker-compose.yml file to use the specific version
           sed -i "s|image: ${{ env.DOCKER_IMAGE }}:.*|image: ${{ env.DOCKER_IMAGE }}:${{ needs.prepare-deployment.outputs.version || 'latest' }}|g" docker-compose.yml
-          
+
           # Start or restart the containers
           docker-compose down
           docker-compose up -d
-          
+
           # Check if services are running
           docker-compose ps
-          
+
           # Display logs
           docker-compose logs --tail=20
           EOL
-          
+
           chmod +x deploy.sh
-          
+
           # Copy files to server
           scp -o StrictHostKeyChecking=no deploy.sh docker-compose.yml $USER@$HOST:$DEPLOY_PATH
-          
+
           # Execute deployment script
           ssh -o StrictHostKeyChecking=no $USER@$HOST "cd $DEPLOY_PATH && \
             export TAPO_DEVICE_COUNT='${{ secrets.TAPO_DEVICE_COUNT }}' \
@@ -156,10 +151,10 @@ jobs:
             LOG_LEVEL='${{ secrets.LOG_LEVEL }}' \
             GF_SECURITY_ADMIN_PASSWORD='${{ secrets.GF_SECURITY_ADMIN_PASSWORD }}' && \
             ./deploy.sh"
-          
+
           echo "deployment-url=$DEPLOY_URL" >> $GITHUB_OUTPUT
           echo "Deployment to ${{ needs.prepare-deployment.outputs.environment }} environment completed."
-      
+
       - name: 📣 Notify deployment status
         if: always()
         run: |
@@ -167,13 +162,13 @@ jobs:
           ENV="${{ needs.prepare-deployment.outputs.environment }}"
           VER="${{ needs.prepare-deployment.outputs.version }}"
           URL="${{ steps.deployment.outputs.deployment-url }}"
-          
+
           echo "Deployment to $ENV environment: $STATUS"
           echo "Version: $VER"
           echo "URL: $URL"
-          
+
           # Add notification system here if needed (Slack, Discord, etc.)
-          
+
   verify-deployment:
     name: ✅ Verify Deployment
     needs: [prepare-deployment, deploy]
@@ -186,8 +181,8 @@ jobs:
           echo "Verifying deployment health..."
           echo "Environment: ${{ needs.prepare-deployment.outputs.environment }}"
           echo "URL: ${{ needs.deploy.outputs.deployment-url }}"
-          
+
           # Example health check using curl
           # curl -sSf ${{ needs.deploy.outputs.deployment-url }}/health || exit 1
-          
-          echo "Deployment health check passed!" 
+
+          echo "Deployment health check passed!"
