@@ -316,6 +316,22 @@ Automated dependency updates with Dependabot for:
 - GitHub Actions
 - Docker base images
 
+### 📝 Automated Changelog
+
+The project uses [release-drafter](https://github.com/release-drafter/release-drafter) to automatically generate release notes and maintain the changelog:
+
+- **Continuous Updates**: Release notes are drafted automatically as PRs are merged
+- **Label-Based Categorization**: PRs are categorized based on their labels (feature, bug, etc.)
+- **Manual Workflow**: A manual workflow can be triggered to update CHANGELOG.md
+- **Version Management**: Semantic versioning is handled automatically
+
+To use the automated changelog:
+
+1. **For Contributors**: Apply appropriate labels to your PRs (feature, bug, documentation, etc.)
+2. **For Maintainers**: Trigger the "Manual Release Update" workflow when ready to update CHANGELOG.md with:
+   - The new version number
+   - Option to publish the release or keep it as a draft
+
 ## Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on the process for submitting pull requests.
@@ -327,15 +343,6 @@ If you fork this repository, you'll need to set up the following secrets in your
 1. **DOCKERHUB_USERNAME**: Your Docker Hub username
 2. **DOCKERHUB_TOKEN**: Your Docker Hub access token
 3. **CODECOV_TOKEN**: Your Codecov token (optional, for coverage reporting)
-4. **DEV_SSH_PRIVATE_KEY**: SSH private key for deployment to development
-5. **PROD_SSH_PRIVATE_KEY**: SSH private key for deployment to production
-
-For each environment (development, staging, production), you'll also need:
-
-- **{ENV}_SSH_HOST**: The host to deploy to
-- **{ENV}_SSH_USER**: The SSH user for deployment
-- **{ENV}_DEPLOY_PATH**: The path on the server to deploy to
-- **{ENV}_DEPLOY_URL**: The URL where the application will be available
 
 ### Building and Publishing to Docker Hub
 
