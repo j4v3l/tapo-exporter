@@ -115,7 +115,7 @@ jobs:
       - name: 🔍 Run Bandit Security Scan
         run: |
           pip install bandit
-          bandit -r tapo_exporter/ -f sarif -o bandit-results.sarif
+          bandit -r tapo_exporter/ -f json -o bandit-results.json
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.sha }}
@@ -127,7 +127,7 @@ jobs:
       - name: 📄 Upload Security Scan Results
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: bandit-results.sarif
+          sarif_file: bandit-results.json
           category: bandit
           token: ${{ github.token }}
         env:
