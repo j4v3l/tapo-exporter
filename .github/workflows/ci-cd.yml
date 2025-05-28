@@ -87,13 +87,19 @@ jobs:
 
       - name: 🧪 Run tests with pytest
         run: |
-          pytest tests/ -v --cov=tapo_exporter --cov-report=xml:coverage.xml
+          pytest tests/ -v --cov=tapo_exporter --cov-report=xml:coverage.xml --junitxml=junit.xml -o junit_family=legacy
 
       - name: 📊 Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
           fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: 📈 Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   security-scan:
