@@ -9,7 +9,7 @@ cryptography==44.0.2
 frozenlist==1.6.0
 idna==3.10
 jsons==1.6.3
-multidict==6.4.3
+multidict==6.6.3
 plugp100==5.1.4
 propcache==0.3.1
 pycparser==2.22
