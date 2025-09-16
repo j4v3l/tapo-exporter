@@ -28,7 +28,7 @@ jobs:
 
       - name: 📥 Checkout code
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
