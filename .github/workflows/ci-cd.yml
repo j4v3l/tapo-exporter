@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v6
@@ -67,7 +67,7 @@ jobs:
 
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 🐍 Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
@@ -102,7 +102,7 @@ jobs:
     needs: code-quality
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -165,7 +165,7 @@ jobs:
     needs: code-quality
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 🚀 Setup Docker
         uses: docker/setup-buildx-action@v3
@@ -226,7 +226,7 @@ jobs:
 
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 🏗️ Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -294,7 +294,7 @@ jobs:
 #
 #     steps:
 #       - name: 📥 Checkout code
-#         uses: actions/checkout@v4
+#         uses: actions/checkout@v5
 #
 #       - name: 🚀 Deploy to development server
 #         id: deployment
@@ -313,7 +313,7 @@ jobs:
 #
 #     steps:
 #       - name: 📥 Checkout code
-#         uses: actions/checkout@v4
+#         uses: actions/checkout@v5
 #
 #       - name: 🚀 Deploy to production server
 #         id: deployment
@@ -332,7 +332,7 @@ jobs:
 
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
