@@ -19,7 +19,7 @@ scapy==2.6.1
 semantic-version==2.10.0
 typish==1.9.3
 urllib3==1.26.20
-yarl==1.20.0
+yarl==1.20.1
 tapo>=0.8.1
 prometheus-client>=0.19.0
 influxdb-client==1.36.1
