@@ -18,7 +18,7 @@ requests==2.32.3
 scapy==2.6.1
 semantic-version==2.10.0
 typish==1.9.3
-urllib3==1.26.20
+urllib3==2.5.0
 yarl==1.20.0
 tapo>=0.8.1
 prometheus-client>=0.19.0
